@@ -1,0 +1,266 @@
+// ==========================================
+// ส่วนที่ 1: การตั้งค่า (แก้ไขตรงนี้)
+// ==========================================
+const SHEET_ID = '11DHzAfR8dByQAw8wrW28fq1nvSHeJmkTT0Ro2K1wpG8'; // ID Google Sheet ของคุณ
+const CHANNEL_ACCESS_TOKEN = 'dnCPXdkivGiUl+GtO/9oj4cAcpOESNsDZPMG00tffo4yvpheagrxJTaBOQli/LLiAuIP5y9215NIgexUVONTXPNlitF7ImiOw/XI2JwxIZKE6aqPkNxphOQbDf19rq6DMscliOHWgVKTvU5vg2djqwdB04t89/1O/w1cDnyilFU='; // Token ของคุณ
+const CALENDAR_ID = 'primary'; // ปฏิทินหลัก
+
+// ==========================================
+// ส่วนที่ 2: ระบบ API (ห้ามแก้ไขถ้าไม่จำเป็น)
+// ==========================================
+
+// รับข้อมูล (GET) -> ส่งคืนข้อมูลเป็น JSON
+function doGet(e) {
+  const op = e.parameter.op;
+  
+  if (op === 'checkMember') {
+    // เช็คสมาชิก
+    return responseJSON(checkMemberLogic(e.parameter));
+  } else {
+    // ค่าเริ่มต้น: ส่งข้อมูล Dropdown (Services, Locations, Staff)
+    return responseJSON(getDropdownData());
+  }
+}
+
+// รับข้อมูลจอง (POST) -> ประมวลผลและบันทึก
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const result = processBooking(data);
+    return responseJSON(result);
+  } catch (error) {
+    return responseJSON({ status: 'error', message: error.toString() });
+  }
+}
+
+// ฟังก์ชันช่วยแปลงข้อมูลเป็น JSON ส่งกลับไปหน้าเว็บ
+function responseJSON(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ==========================================
+// ส่วนที่ 3: LOGIC การทำงาน
+// ==========================================
+
+// 1. ดึงข้อมูลบริการ/สถานที่/พนักงาน
+function getDropdownData() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const getSheetData = (name) => {
+    const sheet = ss.getSheetByName(name);
+    // อ่านข้อมูลตั้งแต่แถว 2 (ข้าม Header)
+    return sheet && sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues() : [];
+  };
+  return {
+    services: getSheetData('Services'),
+    locations: getSheetData('Locations'),
+    staff: getSheetData('Staff')
+  };
+}
+
+// 2. ตรวจสอบสมาชิก
+function checkMemberLogic(params) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName('Members');
+  // ถ้าไม่มี Sheet Members ให้สร้างใหม่
+  if (!sheet) {
+    sheet = ss.insertSheet('Members');
+    sheet.appendRow(['UserID', 'DisplayName', 'RealName', 'Phone', 'PictureURL', 'RegisteredDate']);
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  let foundUser = null;
+  
+  // วนหา UserID
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(params.userId)) {
+      foundUser = {
+        name: data[i][2], // RealName (Column C)
+        phone: data[i][3] // Phone (Column D)
+      };
+      break;
+    }
+  }
+
+  // ถ้าเป็นสมาชิกใหม่ บันทึกลง Sheet
+  if (!foundUser) {
+    sheet.appendRow([
+      params.userId,
+      params.displayName,
+      '', // ชื่อจริง (รออัปเดต)
+      '', // เบอร์โทร (รออัปเดต)
+      params.pictureUrl,
+      new Date()
+    ]);
+    return { isNew: true };
+  }
+  
+  return { isNew: false, userData: foundUser };
+}
+
+// 3. ประมวลผลการจอง (หัวใจหลัก)
+function processBooking(form) {
+  try {
+    if (!form.userId) return { status: 'error', message: 'ไม่พบ User ID' };
+
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const bookingSheet = ss.getSheetByName('Bookings');
+    const serviceSheet = ss.getSheetByName('Services');
+    const staffSheet = ss.getSheetByName('Staff');
+
+    // หา Duration
+    const services = serviceSheet.getRange(2, 1, serviceSheet.getLastRow()-1, 2).getValues();
+    const selectedService = services.find(r => r[0] === form.serviceName);
+    const durationMinutes = selectedService ? parseInt(selectedService[1]) : 60;
+    const price = selectedService ? selectedService[2] : '-';
+
+    // คำนวณเวลา
+    const startDate = new Date(form.date + 'T' + form.time);
+    const endDate = new Date(startDate.getTime() + (durationMinutes * 60000));
+
+    // ตรวจสอบพนักงานว่าง
+    const calendar = CalendarApp.getCalendarById(CALENDAR_ID);
+    const events = calendar.getEvents(startDate, endDate);
+    
+    // ดึงพนักงานทั้งหมด
+    const allStaff = staffSheet.getRange(2, 1, staffSheet.getLastRow()-1, 1).getValues().map(r => r[0]);
+    let busyStaff = [];
+
+    // เช็คว่าใครติดงานใน Calendar บ้าง
+    events.forEach(evt => {
+      let desc = evt.getDescription();
+      allStaff.forEach(s => {
+        if (desc && desc.includes(`พนักงาน: ${s}`)) busyStaff.push(s);
+      });
+    });
+
+    let assignedStaff = '';
+    if (form.staffName !== 'random') {
+      if (busyStaff.includes(form.staffName)) {
+        return { status: 'error', message: `ขออภัย คุณ ${form.staffName} ไม่ว่างในช่วงเวลานี้` };
+      }
+      assignedStaff = form.staffName;
+    } else {
+      let available = allStaff.filter(s => !busyStaff.includes(s));
+      if (available.length === 0) return { status: 'error', message: 'ช่วงเวลานี้พนักงานเต็มทุกท่านครับ' };
+      assignedStaff = available[Math.floor(Math.random() * available.length)];
+    }
+
+    // บันทึกการจอง
+    const bookingId = 'BK' + new Date().getTime().toString().substr(-6);
+    const location = form.locationName;
+    
+    // สร้าง Event ลง Calendar
+    let eventDesc = `ลูกค้า: ${form.name}\nTel: ${form.phone}\nบริการ: ${form.serviceName} (${durationMinutes} นาที)\nสถานที่: ${location}\nพนักงาน: ${assignedStaff}`;
+    calendar.createEvent(`[จอง] ${form.serviceName} - ${form.name}`, startDate, endDate, {
+      description: eventDesc,
+      location: location
+    });
+
+    // บันทึกลง Sheet
+    bookingSheet.appendRow([
+      new Date(), bookingId, form.userId, form.name, form.serviceName, 
+      form.date, form.time, 'ยืนยันแล้ว', location, assignedStaff
+    ]);
+
+    // อัปเดตข้อมูลสมาชิก (ถ้ามีชื่อ/เบอร์ใหม่)
+    updateMemberInfo(form.userId, form.name, form.phone);
+
+    // ส่ง LINE Flex Message
+    const displayTime = `${form.time} - ${('0' + endDate.getHours()).slice(-2)}:${('0' + endDate.getMinutes()).slice(-2)}`;
+    sendFlexMessage(form.userId, bookingId, {
+      ...form, 
+      assignedStaff, 
+      displayTime,
+      price
+    });
+
+    return { status: 'success', message: `จองสำเร็จ! คุณได้คิวกับ ${assignedStaff}` };
+
+  } catch (e) {
+    return { status: 'error', message: 'Error: ' + e.toString() };
+  }
+}
+
+// อัปเดตข้อมูลสมาชิก (ชื่อ/เบอร์) ล่าสุด
+function updateMemberInfo(userId, name, phone) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName('Members');
+    const data = sheet.getDataRange().getValues();
+    for(let i=1; i<data.length; i++) {
+      if(String(data[i][0]) === String(userId)) {
+        sheet.getRange(i+1, 3).setValue(name); // Update Name
+        sheet.getRange(i+1, 4).setValue(phone); // Update Phone
+        break;
+      }
+    }
+  } catch(e) { console.log("Update member error: " + e) }
+}
+
+// 4. ส่งข้อความ LINE (Flex Message) - แก้ไขเอา letterSpacing ออกแล้ว
+function sendFlexMessage(userId, bookingId, data) {
+  const url = 'https://api.line.me/v2/bot/message/push';
+  
+  // Theme Colors
+  const colorPrimary = "#A57BD1";
+  const colorGold = "#C5A059";
+
+  const flexJson = {
+    "type": "bubble",
+    "size": "mega",
+    "header": {
+      "type": "box",
+      "layout": "vertical",
+      "backgroundColor": colorPrimary,
+      "paddingAll": "20px",
+      "contents": [
+        // *** ลบ letterSpacing ออกเพื่อแก้ Error 400 ***
+        {"type": "text", "text": "LERSENSE", "weight": "bold", "color": "#ffffff", "size": "xl", "align": "center"},
+        {"type": "text", "text": "Booking Confirmed", "color": "#ffffff", "size": "xs", "align": "center", "margin": "sm"}
+      ]
+    },
+    "body": {
+      "type": "box",
+      "layout": "vertical",
+      "contents": [
+        {"type": "text", "text": "ยืนยันการจองนัดหมาย", "weight": "bold", "size": "lg", "color": "#333333", "align": "center"},
+        {"type": "text", "text": `คุณ ${data.name}`, "size": "md", "color": "#666666", "align": "center", "margin": "md"},
+        {"type": "separator", "margin": "xl"},
+        {
+          "type": "box",
+          "layout": "vertical",
+          "margin": "xl",
+          "spacing": "md",
+          "contents": [
+            rowFlex("บริการ", data.serviceName),
+            rowFlex("เวลา", `${data.date} | ${data.displayTime}`),
+            rowFlex("สถานที่", data.locationName),
+            rowFlex("พนักงาน", data.assignedStaff),
+             {
+              "type": "box", "layout": "baseline", "margin": "lg",
+              "contents": [
+                {"type": "text", "text": "ราคา", "size": "sm", "color": "#aaaaaa", "flex": 2},
+                {"type": "text", "text": `${data.price} THB`, "size": "lg", "color": colorGold, "align": "end", "weight": "bold", "flex": 3}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "footer": {
+      "type": "box", "layout": "vertical",
+      "contents": [{"type": "text", "text": `Ref: ${bookingId}`, "size": "xxs", "color": "#cccccc", "align": "center"}]
+    }
+  };
+
+  UrlFetchApp.fetch(url, {
+    method: 'post',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN },
+    payload: JSON.stringify({ to: userId, messages: [{ type: 'flex', altText: 'ยืนยันการจอง Lersense', contents: flexJson }] })
+  });
+}
+
+function rowFlex(t, v) {
+  return {"type": "box", "layout": "baseline", "contents": [{"type": "text", "text": t, "color": "#aaaaaa", "size": "sm", "flex": 2}, {"type": "text", "text": v, "wrap": true, "color": "#444444", "size": "sm", "flex": 4}]};
+}
