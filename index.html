@@ -83,31 +83,31 @@
         
         <div class="row g-2 mb-3">
           <div class="col-6">
-            <label class="form-label text-muted small">ชื่อผู้จอง</label>
-            <input type="text" class="form-control" name="name" required placeholder="ชื่อเล่น">
+            <label class="form-label text-muted small">ชื่อผู้จอง (Name)</label>
+            <input type="text" class="form-control" name="name" required placeholder="เช่น สมชาย ชอบนวด">
           </div>
           <div class="col-6">
-            <label class="form-label text-muted small">เบอร์โทร</label>
+            <label class="form-label text-muted small">เบอร์โทร (Phone Number)</label>
             <input type="tel" class="form-control" name="phone" required placeholder="08x-xxxxxxx">
           </div>
         </div>
 
         <div class="mb-3">
-          <label class="form-label text-muted small">บริการ</label>
+          <label class="form-label text-muted small">บริการ Service</label>
           <select class="form-select" id="serviceSelect" name="serviceName" required onchange="calcTime()">
             <option value="" disabled selected>เลือกบริการ...</option>
           </select>
         </div>
 
         <div class="mb-3">
-          <label class="form-label text-muted small">สถานที่</label>
+          <label class="form-label text-muted small">สถานที่ (Location)</label>
           <select class="form-select" id="locationSelect" name="locationName" required>
-            <option value="" disabled selected>เลือกสถานที่...</option>
+            <option value="" disabled selected>เลือกสถานที่ (Select)</option>
           </select>
         </div>
 
         <div class="mb-3">
-          <label class="form-label text-muted small">พนักงานดูแล</label>
+          <label class="form-label text-muted small">พนักงานดูแล (Staff)</label>
           <select class="form-select" id="staffSelect" name="staffName" required>
             <option value="" disabled selected>กำลังโหลด...</option>
           </select>
@@ -130,15 +130,15 @@
           </div>
         </div>
 
-        <button type="submit" id="submitBtn" class="btn-main">ยืนยันการจอง</button>
+        <button type="submit" id="submitBtn" class="btn-main">บันทึกการจอง (Send)</button>
       </form>
     </div>
 
     <div id="successSection" class="card-custom text-center" style="display:none;">
       <div style="font-size: 50px;">✅</div>
-      <h4 class="mt-3 text-success">จองสำเร็จ!</h4>
+      <h4 class="mt-3 text-success">บันทึกสำเร็จ!</h4>
       <p class="text-muted mt-2 small">
-        บันทึกข้อมูลแล้ว<br>กรุณาชำระค่ามัดจำเพื่อยืนยัน
+        ระบบบันทึกข้อมูลแล้ว<br>กรุณาชำระค่ามัดจำเพื่อยืนยันการจอง
       </p>
       
       <div class="alert alert-warning p-2 small">
