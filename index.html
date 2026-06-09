@@ -14,7 +14,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   
-  <!-- 🟢 โหลด SDK ของ Supabase และ LINE LIFF -->
+  <!-- โหลด SDK ของ Supabase และ LINE LIFF -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
@@ -31,14 +31,21 @@
     const isConfigured = !SUPABASE_URL.includes('วาง_');
     const supabaseClient = isConfigured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-    // 🔴 2. ตั้งค่า LIFF ID (ได้จากเว็บ LINE Developers) 🔴
+    // 🔴 2. ตั้งค่า LIFF ID 🔴
     const LIFF_ID = '2008899579-4H1nxNds'; 
 
     const Icon = ({ name, className }) => <i data-lucide={name} className={className}></i>;
 
+    // ข้อมูลจำลองพนักงานนวด
+    const MOCK_STAFF = [
+      { id: 'random', name: '✨ สุ่มพนักงานที่เหมาะสม' },
+      { id: 'ST1', name: 'หมอเอ (เชี่ยวชาญนวดไทย)' },
+      { id: 'ST2', name: 'หมอบี (เชี่ยวชาญอโรม่า)' },
+    ];
+
     function App() {
       const [step, setStep] = useState('LOGIN'); 
-      const [loading, setLoading] = useState(true); // เริ่มมาให้ Loading หมุนรอ LIFF ก่อน
+      const [loading, setLoading] = useState(true); 
       const [modal, setModal] = useState({ isOpen: false, title: '', message: '' });
       const [isDarkMode, setIsDarkMode] = useState(false);
       const [dbError, setDbError] = useState(false);
@@ -66,17 +73,13 @@
         if (window.lucide) window.lucide.createIcons();
       });
 
-      // --- 🟢 ขั้นตอนเริ่มต้น (Init LIFF & Supabase) ---
       useEffect(() => {
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setIsDarkMode(true);
         fetchSupabaseData();
-        
-        // เริ่มต้น LIFF ทันทีที่เปิดหน้าเว็บ
         initializeApp();
       }, []);
 
       const initializeApp = async () => {
-        // ถ้าเป็นโหมดจำลอง (ยังไม่ได้ใส่ LIFF ID หรือ Supabase)
         if (LIFF_ID.includes('วาง_') || !isConfigured) {
           setLoading(false);
           return;
@@ -84,12 +87,9 @@
 
         try {
           await liff.init({ liffId: LIFF_ID });
-          
-          // ตรวจสอบว่าเปิดใน LINE หรือล็อกอินในเว็บ Browser หรือยัง
           if (liff.isLoggedIn()) {
             handleLiffLoginSuccess();
           } else {
-            // ถ่ายังไม่ล็อกอิน (เปิดใน Browser ปกติ) ให้หยุดหมุน ให้ลูกค้ากดปุ่มล็อกอินเอง
             setLoading(false);
           }
         } catch (err) {
@@ -101,22 +101,19 @@
 
       const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-      // --- 🟢 จัดการหลังล็อกอิน LINE สำเร็จ ---
       const handleLiffLoginSuccess = async () => {
         setLoading(true);
         try {
-          const profile = await liff.getProfile(); // ดึงข้อมูลจาก LINE
-          const lineUserId = profile.userId; // ไอดีที่ไม่ซ้ำกันของแต่ละคน
+          const profile = await liff.getProfile(); 
+          const lineUserId = profile.userId; 
 
-          // เอา lineUserId ไปหาใน Supabase ว่าเคยสมัครยัง
           const { data: existingUser, error } = await supabaseClient
             .from('profiles')
             .select('*')
-            .eq('line_user_id', lineUserId) // ค้นหาด้วย line_user_id
+            .eq('line_user_id', lineUserId)
             .maybeSingle();
 
           if (existingUser) {
-            // เคยสมัครแล้ว -> ดึงข้อมูลและไปหน้าจอง
             setUserProfile({ 
               id: existingUser.id, 
               name: `${existingUser.first_name} ${existingUser.last_name}`, 
@@ -125,11 +122,10 @@
             });
             setStep('BOOKING');
           } else {
-            // เป็นผู้ใช้ใหม่ -> ไปหน้าสมัคร
             setLineProfile({
               displayName: profile.displayName,
               pictureUrl: profile.pictureUrl,
-              userId: lineUserId // เก็บไว้เพื่อบันทึกลงฐานข้อมูลตอนสมัคร
+              userId: lineUserId 
             });
             setStep('REGISTER');
           }
@@ -140,10 +136,8 @@
         setLoading(false);
       };
 
-      // --- 🟢 ปุ่มล็อกอินหน้าแรก (สำหรับเปิดในเว็บปกติ) ---
       const handleLoginButton = () => {
         if (LIFF_ID.includes('วาง_')) {
-          // โหมดจำลอง
           setLoading(true);
           setTimeout(() => {
             setLoading(false);
@@ -152,12 +146,10 @@
             setStep('REGISTER');
           }, 800);
         } else {
-          // ล็อกอิน LINE จริง
           liff.login(); 
         }
       };
 
-      // --- 🟢 บันทึกการสมัครสมาชิก ---
       const handleRegister = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -165,9 +157,8 @@
 
         if (supabaseClient && lineProfile) {
           try {
-            // สร้างลูกค้าใหม่ และผูก line_user_id เอาไว้
             const { data, error } = await supabaseClient.from('profiles').insert([{
-              line_user_id: lineProfile.userId, // สำคัญมาก! เพื่อให้จำได้ว่า LINE นี้คือใคร
+              line_user_id: lineProfile.userId, 
               first_name: formData.firstName,
               last_name: formData.lastName,
               email: formData.email,
@@ -203,8 +194,8 @@
             { id: 'S2', name: '[จำลอง] นวดอโรม่า', duration_minutes: 90, price: 1200, deposit_amount: 500 }
           ]);
           setBranchesData([
-            { id: 'L1', name: '[จำลอง] สาขาหลัก', type: 'in_store' },
-            { id: 'L2', name: '[จำลอง] นอกสถานที่', type: 'off_site' }
+            { id: 'L1', name: '[จำลอง] สาขาหลัก (รับบริการที่ร้าน)', type: 'in_store' },
+            { id: 'L2', name: '[จำลอง] นอกสถานที่ (Delivery)', type: 'off_site' }
           ]);
           return;
         }
@@ -243,6 +234,7 @@
         }
       };
 
+      // คำนวณเวลาสิ้นสุดเมื่อมีการเลือกบริการและเวลา
       useEffect(() => {
         if (formData.serviceId && formData.time && servicesData.length > 0) {
           const service = servicesData.find(s => s.id === formData.serviceId);
@@ -252,18 +244,23 @@
             dateObj.setHours(hours, minutes + service.duration_minutes);
             const endH = String(dateObj.getHours()).padStart(2, '0');
             const endM = String(dateObj.getMinutes()).padStart(2, '0');
-            setEndTime(`${service.duration_minutes} นาที • เสร็จประมาณ ${endH}:${endM}`);
+            setEndTime(`ใช้เวลา ${service.duration_minutes} นาที • เสร็จประมาณ ${endH}:${endM} น.`);
           }
         } else {
-          setEndTime('ยังไม่ได้เลือก');
+          setEndTime('กรุณาเลือกบริการและเวลา');
         }
       }, [formData.serviceId, formData.time, servicesData]);
 
+      // เช็คว่าเลือกสาขาแบบ Off-site หรือไม่ เพื่อแสดงอุปกรณ์
+      const isOffSite = branchesData.find(b => b.id === formData.locationId)?.type === 'off_site';
+
       const handleBookingSubmit = async (e) => {
         e.preventDefault();
+        
+        // กั้นกรณีมีความเสี่ยงสุขภาพ
         const { pregnant, highBp, surgery } = formData.healthRisks;
         if (pregnant || highBp || surgery) {
-          setModal({ isOpen: true, title: 'ไม่สามารถทำรายการได้', message: 'ท่านมีปัญหาสุขภาพที่อยู่ในกลุ่มเสี่ยง กรุณาติดต่อแอดมินเพื่อประเมินการรับบริการครับ' });
+          setModal({ isOpen: true, title: 'ไม่สามารถทำรายการได้อัตโนมัติ', message: 'ท่านมีปัญหาสุขภาพที่อยู่ในกลุ่มเสี่ยง กรุณาติดต่อแอดมินผ่านแชทเพื่อประเมินการรับบริการเพื่อความปลอดภัยครับ' });
           return;
         }
 
@@ -279,6 +276,7 @@
                 customer_id: userProfile.id, 
                 service_id: formData.serviceId,
                 branch_id: formData.locationId, 
+                // บันทึกหมอนวด (ถ้าไม่ได้ดึงจากตาราง ให้เป็น null ไปก่อนได้ หรือสร้าง column แยก)
                 booking_date: formData.date,
                 start_time: formData.time + ":00", 
                 end_time: formData.time + ":00", 
@@ -286,7 +284,7 @@
                 total_price: selectedService.price * parseInt(formData.pax),
                 deposit_paid: 0,
                 health_risks: formData.healthRisks,
-                equipments: formData.equipments,
+                equipments: isOffSite ? formData.equipments : null,
                 status: 'pending_payment'
             }]);
             if (error) throw error;
@@ -353,6 +351,11 @@
             .ticket-cutout::before, .ticket-cutout::after { content: ''; position: absolute; top: -12px; width: 24px; height: 24px; background: var(--bg-gradient); border-radius: 50%; border: 1px solid var(--border-glass); z-index: 10; }
             .ticket-cutout::before { left: -12px; border-right-color: transparent; border-top-color: transparent; transform: rotate(45deg); }
             .ticket-cutout::after { right: -12px; border-left-color: transparent; border-top-color: transparent; transform: rotate(-45deg); }
+            
+            /* Custom Checkbox Container */
+            .check-item { background: var(--bg-element); border: 1px solid var(--border-glass); border-radius: 16px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; }
+            .check-item:hover { background: var(--bg-input-focus); }
+            .check-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: #9333ea; border-radius: 4px; }
           `}</style>
 
           {/* Modal Overlay */}
@@ -420,7 +423,6 @@
                   <p className="text-sm" style={{ color: 'var(--text-muted)' }}>กรุณากรอกข้อมูลที่จำเป็นเพื่อเชื่อมต่อกับบัญชีของท่าน</p>
                 </div>
                 <form onSubmit={handleRegister} className="glass-panel rounded-[28px] overflow-hidden p-6">
-                  {/* แสดงโปรไฟล์ LINE (ถ้ามี) */}
                   {lineProfile && (
                     <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl shadow-inner border" style={{ background: isDarkMode ? 'rgba(0,195,0,0.1)' : 'rgba(0,195,0,0.05)', borderColor: 'rgba(0,195,0,0.2)' }}>
                       <img src={lineProfile.pictureUrl} alt="LINE Avatar" className="w-12 h-12 rounded-full border-2 border-[#00c300] shadow-sm" />
@@ -487,6 +489,7 @@
               </div>
             )}
 
+            {/* ================= STEP: BOOKING (FULL FORM) ================= */}
             {step === 'BOOKING' && (
               <div className="animate-fade-in">
                 <div className="mb-6 px-2">
@@ -501,8 +504,10 @@
                 )}
 
                 <form onSubmit={handleBookingSubmit} className="glass-panel rounded-[28px] overflow-hidden mb-8">
+                  
+                  {/* 1. รายละเอียดบริการ */}
                   <div className="p-5 border-b relative z-10" style={{ borderColor: 'var(--border-glass)' }}>
-                    <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="map-pin" className="w-5 h-5" /> รายละเอียดการจอง</h3>
+                    <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="map-pin" className="w-5 h-5" /> 1. รายละเอียดการจอง</h3>
                     <div className="flex flex-col gap-4">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>บริการ</label>
@@ -515,7 +520,7 @@
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>สาขา</label>
+                          <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>สาขา/สถานที่</label>
                           <div className="input-shell rounded-2xl">
                             <select name="locationId" required className="form-element px-3" value={formData.locationId} onChange={handleChange}>
                               <option value="" disabled>เลือกสาขา</option>
@@ -524,7 +529,7 @@
                           </div>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>จำนวนคน</label>
+                          <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>จำนวนผู้รับบริการ</label>
                           <div className="input-shell rounded-2xl">
                             <select name="pax" required className="form-element px-3" value={formData.pax} onChange={handleChange}>
                               {[1,2,3,4].map(n => <option key={n} value={n}>{n} ท่าน</option>)}
@@ -532,20 +537,73 @@
                           </div>
                         </div>
                       </div>
+
+                      {/* 2. เลือกพนักงานนวด */}
+                      <div className="flex flex-col gap-1.5 mt-2">
+                        <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>เลือกพนักงานนวด (Therapist)</label>
+                        <div className="input-shell rounded-2xl">
+                          <select name="staffId" className="form-element" value={formData.staffId} onChange={handleChange}>
+                            {MOCK_STAFF.map(staff => <option key={staff.id} value={staff.id}>{staff.name}</option>)}
+                          </select>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
+                  {/* 3. วันและเวลา */}
                   <div className="p-5 border-b relative z-10" style={{ borderColor: 'var(--border-glass)' }}>
-                    <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="calendar" className="w-5 h-5" /> วันและเวลา</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="calendar" className="w-5 h-5" /> 2. วันและเวลา</h3>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>วันที่</label>
+                        <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>วันที่นัดหมาย</label>
                         <div className="input-shell rounded-2xl"><input type="date" name="date" required min={today} className="form-element" value={formData.date} onChange={handleChange} /></div>
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>เวลาเริ่ม</label>
                         <div className="input-shell rounded-2xl"><input type="time" name="time" required className="form-element" value={formData.time} onChange={handleChange} /></div>
                       </div>
+                    </div>
+                    {/* แสดงเวลาสิ้นสุดอัตโนมัติ */}
+                    <div className="p-3 rounded-xl flex items-center gap-2 text-sm" style={{ background: isDarkMode ? 'rgba(168, 85, 247, 0.1)' : 'rgba(168, 85, 247, 0.05)', border: '1px solid var(--border-glass)', color: 'var(--text-heading)' }}>
+                      <Icon name="clock" className="w-4 h-4 opacity-70" /> {endTime}
+                    </div>
+                  </div>
+
+                  {/* 4. อุปกรณ์เพิ่มเติม (แสดงเมื่อเลือกนอกสถานที่) */}
+                  {isOffSite && (
+                    <div className="p-5 border-b relative z-10 animate-fade-in" style={{ borderColor: 'var(--border-glass)' }}>
+                      <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="package" className="w-5 h-5" /> 3. ขอรับอุปกรณ์เสริม (ฟรี)</h3>
+                      <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>สำหรับการนวดนอกสถานที่ (Delivery) โปรดระบุหากท่านต้องการให้พนักงานเตรียมอุปกรณ์ไปให้</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="check-item">
+                          <input type="checkbox" name="equip_mat" checked={formData.equipments.mat} onChange={handleChange} />
+                          <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>เบาะรองนวด</span>
+                        </label>
+                        <label className="check-item">
+                          <input type="checkbox" name="equip_towel" checked={formData.equipments.towel} onChange={handleChange} />
+                          <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>ผ้าขนหนู</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. แบบสอบถามสุขภาพ (สำคัญมาก) */}
+                  <div className="p-5 border-b relative z-10" style={{ borderColor: 'var(--border-glass)' }}>
+                    <h3 className="font-semibold mb-3 flex items-center gap-2 text-red-500"><Icon name="heart-pulse" className="w-5 h-5" /> {isOffSite ? '4.' : '3.'} ข้อมูลสุขภาพเบื้องต้น</h3>
+                    <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>เพื่อความปลอดภัยในการรับบริการ โปรดติ๊กเครื่องหมายหากท่านมีภาวะดังต่อไปนี้</p>
+                    <div className="flex flex-col gap-3">
+                      <label className="check-item">
+                        <input type="checkbox" name="health_pregnant" checked={formData.healthRisks.pregnant} onChange={handleChange} />
+                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>กำลังตั้งครรภ์</span>
+                      </label>
+                      <label className="check-item">
+                        <input type="checkbox" name="health_highBp" checked={formData.healthRisks.highBp} onChange={handleChange} />
+                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>โรคความดันโลหิตสูง / โรคหัวใจ</span>
+                      </label>
+                      <label className="check-item">
+                        <input type="checkbox" name="health_surgery" checked={formData.healthRisks.surgery} onChange={handleChange} />
+                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>เพิ่งได้รับการผ่าตัด (ภายใน 6 เดือน)</span>
+                      </label>
                     </div>
                   </div>
 
@@ -556,7 +614,7 @@
               </div>
             )}
 
-            {/* PAYMENT STEP */}
+            {/* PAYMENT STEP (Same as before) */}
             {step === 'PAYMENT' && (
               <div className="animate-fade-in">
                 <div className="mb-6 px-2 text-center">
@@ -612,7 +670,7 @@
               </div>
             )}
 
-            {/* TICKET STEP */}
+            {/* TICKET STEP (Same as before) */}
             {step === 'TICKET' && (
               <div className="animate-fade-in flex flex-col items-center pt-4">
                 <h2 className="text-2xl font-bold mb-6 text-green-600 flex items-center gap-2"><Icon name="check-circle" className="w-8 h-8" /> ชำระเงินสำเร็จ</h2>
