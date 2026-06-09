@@ -12,7 +12,6 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -33,11 +32,11 @@
     const Icon = ({ name, className }) => <i data-lucide={name} className={className}></i>;
 
     function App() {
-      // เพิ่มสถานะ PAYMENT และ TICKET
       const [step, setStep] = useState('LOGIN'); 
       const [loading, setLoading] = useState(false);
       const [modal, setModal] = useState({ isOpen: false, title: '', message: '' });
       const [isDarkMode, setIsDarkMode] = useState(false);
+      const [dbError, setDbError] = useState(false);
 
       const [servicesData, setServicesData] = useState([]);
       const [branchesData, setBranchesData] = useState([]);
@@ -53,8 +52,8 @@
       });
 
       const [endTime, setEndTime] = useState('ยังไม่ได้เลือก');
-      const [bookingRef, setBookingRef] = useState(''); // เก็บเลขที่จอง
-      const [paymentMethod, setPaymentMethod] = useState('promptpay'); // 'promptpay' | 'creditcard'
+      const [bookingRef, setBookingRef] = useState('');
+      const [paymentMethod, setPaymentMethod] = useState('promptpay');
       
       const today = new Date().toISOString().split('T')[0];
 
@@ -83,12 +82,21 @@
         }
 
         try {
-          const { data: sData } = await supabaseClient.from('services').select('*').eq('is_active', true);
-          if (sData) setServicesData(sData);
-          const { data: bData } = await supabaseClient.from('branches').select('*').eq('is_active', true);
-          if (bData) setBranchesData(bData);
+          const { data: sData, error: sError } = await supabaseClient.from('services').select('*').eq('is_active', true);
+          const { data: bData, error: bError } = await supabaseClient.from('branches').select('*').eq('is_active', true);
+          
+          if (sError || bError) throw (sError || bError);
+          
+          if (sData && sData.length > 0) {
+            setServicesData(sData);
+            setDbError(false);
+          } else {
+            setDbError(true); 
+          }
+          if (bData && bData.length > 0) setBranchesData(bData);
         } catch (err) {
           console.error("Fetch Error: ", err);
+          setDbError(true);
         }
       };
 
@@ -127,8 +135,8 @@
         setLoading(true);
         setTimeout(() => {
           setLoading(false);
-          setLineProfile({ displayName: 'ธนัช จงวรรธนะหิรัญ', pictureUrl: 'https://ui-avatars.com/api/?name=Thanat+J&background=00c300&color=fff&size=150' });
-          setFormData(prev => ({ ...prev, firstName: 'ธนัช', lastName: 'จงวรรธนะหิรัญ' }));
+          setLineProfile({ displayName: 'สมหญิง รักสปา', pictureUrl: 'https://ui-avatars.com/api/?name=Somying+R&background=00c300&color=fff&size=150' });
+          setFormData(prev => ({ ...prev, firstName: 'สมหญิง', lastName: 'รักสปา' }));
           setStep('REGISTER');
         }, 800);
       };
@@ -145,6 +153,8 @@
               last_name: formData.lastName,
               email: formData.email,
               phone: formData.phone,
+              dob: formData.dob,
+              address: formData.address,
               pdpa_consented: formData.pdpaConsent,
               tier: 'Classic'
             }]).select();
@@ -177,8 +187,7 @@
 
         if (supabaseClient) {
           try {
-            const selectedService = servicesData.find(s => s.id === formData.serviceId);
-            
+            const selectedService = servicesData.find(s => s.id === formData.serviceId) || { price: 0 };
             const { error } = await supabaseClient.from('bookings').insert([{
                 booking_ref: newBookingRef,
                 customer_id: userProfile.id, 
@@ -192,7 +201,7 @@
                 deposit_paid: 0,
                 health_risks: formData.healthRisks,
                 equipments: formData.equipments,
-                status: 'pending_payment' // สร้างสถานะรอมัดจำ
+                status: 'pending_payment'
             }]);
             if (error) throw error;
           } catch (err) {
@@ -205,35 +214,30 @@
 
         setTimeout(() => {
           setLoading(false);
-          setStep('PAYMENT'); // เปลี่ยนไปหน้าชำระเงิน
+          setStep('PAYMENT');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 800);
       };
 
-      // ฟังก์ชันจำลองการจ่ายเงินสำเร็จ
       const handlePaymentSuccess = async () => {
         setLoading(true);
-        
         if (supabaseClient) {
           try {
-            const selectedService = servicesData.find(s => s.id === formData.serviceId);
+            const selectedService = servicesData.find(s => s.id === formData.serviceId) || {};
             const depositAmount = (selectedService.deposit_amount || 200) * parseInt(formData.pax);
 
-            // อัปเดตสถานะในฐานข้อมูลเป็น "confirmed"
             const { error } = await supabaseClient
               .from('bookings')
               .update({ status: 'confirmed', deposit_paid: depositAmount, payment_status: 'deposit_paid' })
               .eq('booking_ref', bookingRef);
-              
             if (error) throw error;
           } catch (err) {
             console.error("Update Payment Error:", err);
           }
         }
-
         setTimeout(() => {
           setLoading(false);
-          setStep('TICKET'); // ไปหน้า E-Ticket
+          setStep('TICKET');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 1500);
       };
@@ -259,13 +263,8 @@
             .btn-line { background: linear-gradient(180deg, #10d061 0%, #06b755 100%); border: 1px solid rgba(6,199,85,0.18); box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 10px 24px rgba(6,183,85,0.24); transition: transform .18s ease; }
             ::-webkit-calendar-picker-indicator { filter: ${isDarkMode ? 'invert(1)' : 'invert(0)'}; }
             
-            /* Ticket Styles */
-            .ticket-cutout {
-              position: relative;
-            }
-            .ticket-cutout::before, .ticket-cutout::after {
-              content: ''; position: absolute; top: -12px; width: 24px; height: 24px; background: var(--bg-gradient); border-radius: 50%; border: 1px solid var(--border-glass); z-index: 10;
-            }
+            .ticket-cutout { position: relative; }
+            .ticket-cutout::before, .ticket-cutout::after { content: ''; position: absolute; top: -12px; width: 24px; height: 24px; background: var(--bg-gradient); border-radius: 50%; border: 1px solid var(--border-glass); z-index: 10; }
             .ticket-cutout::before { left: -12px; border-right-color: transparent; border-top-color: transparent; transform: rotate(45deg); }
             .ticket-cutout::after { right: -12px; border-left-color: transparent; border-top-color: transparent; transform: rotate(-45deg); }
           `}</style>
@@ -313,7 +312,6 @@
           {/* Main Content */}
           <div className="max-w-lg mx-auto px-4 pt-24 relative z-30">
             
-            {/* LOGIN & REGISTER STEPS (Same as before) */}
             {step === 'LOGIN' && (
               <div className="animate-fade-in flex flex-col items-center justify-center pt-10 pb-8 text-center">
                 <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-purple-500 to-yellow-600 p-[2px] shadow-xl mb-8">
@@ -333,28 +331,80 @@
               <div className="animate-fade-in">
                 <div className="mb-6 px-2 text-center">
                   <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>ลงทะเบียนสมาชิก</h2>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>กรุณากรอกข้อมูลที่จำเป็นเพื่อเชื่อมต่อกับ LINE</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>กรุณากรอกข้อมูลที่จำเป็นเพื่อเชื่อมต่อกับบัญชีของท่าน</p>
                 </div>
                 <form onSubmit={handleRegister} className="glass-panel rounded-[28px] overflow-hidden p-6">
-                  {/* Form fields same as before... */}
                   <div className="flex flex-col gap-5">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>ชื่อ</label><div className="input-shell rounded-2xl flex items-center pl-3"><input type="text" name="firstName" required className="form-element px-2" value={formData.firstName} onChange={handleChange} /></div></div>
                       <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>นามสกุล</label><div className="input-shell rounded-2xl flex items-center pl-3"><input type="text" name="lastName" required className="form-element px-2" value={formData.lastName} onChange={handleChange} /></div></div>
                     </div>
-                    <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>เบอร์โทรศัพท์</label><div className="input-shell rounded-2xl flex items-center pl-3"><Icon name="phone" className="w-5 h-5 opacity-50" style={{ color: 'var(--text-main)' }} /><input type="tel" name="phone" required pattern="[0-9]{10}" className="form-element pl-2" value={formData.phone} onChange={handleChange} /></div></div>
+                    
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>อีเมล</label>
+                      <div className="input-shell rounded-2xl flex items-center pl-3">
+                        <Icon name="mail" className="w-5 h-5 opacity-50" style={{ color: 'var(--text-main)' }} />
+                        <input type="email" name="email" required className="form-element pl-2" value={formData.email} onChange={handleChange} />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>เบอร์โทรศัพท์</label>
+                        <div className="input-shell rounded-2xl flex items-center pl-3">
+                          <Icon name="phone" className="w-5 h-5 opacity-50" style={{ color: 'var(--text-main)' }} />
+                          <input type="tel" name="phone" required pattern="[0-9]{10}" className="form-element pl-2" value={formData.phone} onChange={handleChange} />
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>วันเกิด</label>
+                        <div className="input-shell rounded-2xl flex items-center pr-3">
+                          <input type="date" name="dob" required className="form-element px-2 w-full" value={formData.dob} onChange={handleChange} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* เพิ่มช่องกรอกที่อยู่ */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>ที่อยู่</label>
+                      <div className="input-shell rounded-2xl flex items-start pl-3 pt-3">
+                        <Icon name="home" className="w-5 h-5 opacity-50 mt-1" style={{ color: 'var(--text-main)' }} />
+                        <textarea name="address" required placeholder="บ้านเลขที่, ถนน, ซอย, จังหวัด, รหัสไปรษณีย์..."
+                          className="bg-transparent border-none outline-none text-sm w-full resize-none min-h-[80px] px-2" 
+                          value={formData.address} onChange={handleChange} style={{ color: 'var(--text-main)' }}></textarea>
+                      </div>
+                    </div>
+
+                    {/* เพิ่มช่องยินยอม PDPA */}
+                    <div className="mt-2 p-4 rounded-2xl" style={{ background: 'var(--bg-element)', border: '1px solid var(--border-glass)' }}>
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" name="pdpaConsent" required checked={formData.pdpaConsent} onChange={handleChange} className="w-5 h-5 accent-purple-600 rounded mt-0.5" />
+                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          <strong style={{ color: 'var(--text-main)' }}>การให้ความยินยอม (PDPA)</strong><br/>
+                          ข้าพเจ้ายินยอมให้เก็บรวบรวมและใช้ข้อมูลส่วนบุคคล เพื่อวัตถุประสงค์ในการจองคิวและให้บริการ
+                        </div>
+                      </label>
+                    </div>
+
                     <button type="submit" className="w-full btn-gold py-4 rounded-2xl text-white font-bold text-lg mt-2">ยืนยันการสมัคร</button>
                   </div>
                 </form>
               </div>
             )}
 
-            {/* BOOKING STEP */}
             {step === 'BOOKING' && (
               <div className="animate-fade-in">
                 <div className="mb-6 px-2">
                   <h2 className="text-3xl font-bold leading-tight tracking-tight mb-2" style={{ color: 'var(--text-main)' }}>เลือกบริการ นัดเวลา<br/>จองได้ในไม่กี่ขั้นตอน</h2>
                 </div>
+                
+                {isConfigured && dbError && (
+                  <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-2xl text-sm border border-red-200">
+                    <strong className="block mb-1"><Icon name="alert-circle" className="w-5 h-5 inline mr-1" /> ดึงข้อมูลจากฐานข้อมูลไม่ได้!</strong>
+                    โปรดรันโค้ด SQL เพื่ออนุญาตการอ่านข้อมูล (แก้ปัญหา RLS) ในเมนู SQL Editor ของ Supabase
+                  </div>
+                )}
+
                 <form onSubmit={handleBookingSubmit} className="glass-panel rounded-[28px] overflow-hidden mb-8">
                   <div className="p-5 border-b relative z-10" style={{ borderColor: 'var(--border-glass)' }}>
                     <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="map-pin" className="w-5 h-5" /> รายละเอียดการจอง</h3>
@@ -411,7 +461,7 @@
               </div>
             )}
 
-            {/* ================= STEP: PAYMENT ================= */}
+            {/* PAYMENT STEP */}
             {step === 'PAYMENT' && (
               <div className="animate-fade-in">
                 <div className="mb-6 px-2 text-center">
@@ -422,28 +472,17 @@
                 <div className="glass-panel rounded-[28px] p-6 mb-6 text-center">
                   <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>ยอดมัดจำที่ต้องชำระ (Hold 15 นาที)</p>
                   <h3 className="text-5xl font-bold mb-2" style={{ color: 'var(--text-heading)' }}>฿{depositTotal.toLocaleString()}</h3>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    ({selectedServiceObj.name} x {formData.pax} ท่าน)
-                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>({selectedServiceObj.name} x {formData.pax} ท่าน)</p>
                 </div>
 
                 <div className="glass-panel rounded-[28px] p-5 mb-8">
                   <h3 className="font-semibold mb-4 text-sm" style={{ color: 'var(--text-heading)' }}>เลือกช่องทางชำระเงิน</h3>
-                  
                   <div className="flex gap-3 mb-6">
-                    <button 
-                      onClick={() => setPaymentMethod('promptpay')}
-                      className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all ${paymentMethod === 'promptpay' ? 'border-purple-500 bg-purple-500/10' : 'border-transparent'}`}
-                      style={{ background: paymentMethod === 'promptpay' ? '' : 'var(--bg-input)' }}
-                    >
+                    <button onClick={() => setPaymentMethod('promptpay')} className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all ${paymentMethod === 'promptpay' ? 'border-purple-500 bg-purple-500/10' : 'border-transparent'}`} style={{ background: paymentMethod === 'promptpay' ? '' : 'var(--bg-input)' }}>
                       <Icon name="qr-code" className={`w-6 h-6 ${paymentMethod === 'promptpay' ? 'text-purple-600' : 'text-gray-400'}`} />
                       <span className={`text-xs font-bold ${paymentMethod === 'promptpay' ? 'text-purple-700' : 'text-gray-500'}`}>พร้อมเพย์ QR</span>
                     </button>
-                    <button 
-                      onClick={() => setPaymentMethod('creditcard')}
-                      className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all ${paymentMethod === 'creditcard' ? 'border-purple-500 bg-purple-500/10' : 'border-transparent'}`}
-                      style={{ background: paymentMethod === 'creditcard' ? '' : 'var(--bg-input)' }}
-                    >
+                    <button onClick={() => setPaymentMethod('creditcard')} className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all ${paymentMethod === 'creditcard' ? 'border-purple-500 bg-purple-500/10' : 'border-transparent'}`} style={{ background: paymentMethod === 'creditcard' ? '' : 'var(--bg-input)' }}>
                       <Icon name="credit-card" className={`w-6 h-6 ${paymentMethod === 'creditcard' ? 'text-purple-600' : 'text-gray-400'}`} />
                       <span className={`text-xs font-bold ${paymentMethod === 'creditcard' ? 'text-purple-700' : 'text-gray-500'}`}>บัตรเครดิต</span>
                     </button>
@@ -452,7 +491,6 @@
                   {paymentMethod === 'promptpay' && (
                     <div className="text-center animate-fade-in">
                       <div className="w-48 h-48 mx-auto bg-white p-2 rounded-2xl shadow-sm mb-4">
-                        {/* Placeholder for Thai QR Code */}
                         <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PROMPTPAY_${bookingRef}&color=4c1d95`} alt="QR Code" className="w-full h-full object-contain opacity-90" />
                       </div>
                       <p className="text-xs text-red-500 font-semibold mb-4 animate-pulse">กรุณาสแกนภายใน 14:59 นาที</p>
@@ -479,66 +517,41 @@
               </div>
             )}
 
-            {/* ================= STEP: TICKET ================= */}
+            {/* TICKET STEP */}
             {step === 'TICKET' && (
               <div className="animate-fade-in flex flex-col items-center pt-4">
-                <h2 className="text-2xl font-bold mb-6 text-green-600 flex items-center gap-2">
-                  <Icon name="check-circle" className="w-8 h-8" /> ชำระเงินสำเร็จ
-                </h2>
+                <h2 className="text-2xl font-bold mb-6 text-green-600 flex items-center gap-2"><Icon name="check-circle" className="w-8 h-8" /> ชำระเงินสำเร็จ</h2>
                 
-                {/* E-Ticket Design */}
                 <div className="w-full max-w-sm glass-panel rounded-[32px] overflow-hidden shadow-2xl relative mb-8" style={{ border: 'none' }}>
-                  {/* Ticket Header */}
                   <div className="bg-gradient-to-br from-purple-600 to-purple-900 p-6 text-center text-white relative">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-10 -mt-10"></div>
                     <p className="text-xs uppercase tracking-widest opacity-80 mb-1">E-Ticket / ใบยืนยันคิว</p>
                     <h3 className="text-xl font-bold">{selectedServiceObj.name}</h3>
                   </div>
                   
-                  {/* Cutout / Dashed line */}
                   <div className="border-t-2 border-dashed border-gray-300 ticket-cutout" style={{ borderColor: 'var(--border-glass)' }}></div>
 
-                  {/* Ticket Body */}
                   <div className="p-6 relative z-10" style={{ background: isDarkMode ? '#1e1b2e' : '#ffffff' }}>
                     <div className="flex justify-between items-center mb-6">
-                      <div>
-                        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>วันที่นัดหมาย (Date)</p>
-                        <p className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>{formData.date}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>เวลา (Time)</p>
-                        <p className="font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{formData.time} น.</p>
-                      </div>
+                      <div><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>วันที่นัดหมาย (Date)</p><p className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>{formData.date}</p></div>
+                      <div className="text-right"><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>เวลา (Time)</p><p className="font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{formData.time} น.</p></div>
                     </div>
 
                     <div className="flex justify-between items-center mb-6">
-                      <div>
-                        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>ชื่อลูกค้า (Name)</p>
-                        <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{userProfile.name}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>จำนวน (Pax)</p>
-                        <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{formData.pax} ท่าน</p>
-                      </div>
+                      <div><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>ชื่อลูกค้า (Name)</p><p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{userProfile.name}</p></div>
+                      <div className="text-right"><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>จำนวน (Pax)</p><p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{formData.pax} ท่าน</p></div>
                     </div>
                     
                     <div className="bg-gray-50 p-4 rounded-2xl flex items-center justify-between" style={{ background: 'var(--bg-input)' }}>
-                      <div>
-                        <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-muted)' }}>Booking Ref.</p>
-                        <p className="font-mono font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{bookingRef}</p>
-                      </div>
+                      <div><p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-muted)' }}>Booking Ref.</p><p className="font-mono font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{bookingRef}</p></div>
                       <Icon name="ticket" className="w-8 h-8 opacity-20" style={{ color: 'var(--text-heading)' }} />
                     </div>
                   </div>
                 </div>
 
                 <div className="flex gap-3 w-full max-w-sm">
-                  <button onClick={() => window.print()} className="flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-glass)', color: 'var(--text-main)' }}>
-                    <Icon name="download" className="w-5 h-5" /> บันทึกรูป
-                  </button>
-                  <button onClick={() => setStep('BOOKING')} className="flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200">
-                    <Icon name="home" className="w-5 h-5" /> หน้าหลัก
-                  </button>
+                  <button onClick={() => window.print()} className="flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-glass)', color: 'var(--text-main)' }}><Icon name="download" className="w-5 h-5" /> บันทึกรูป</button>
+                  <button onClick={() => setStep('BOOKING')} className="flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200"><Icon name="home" className="w-5 h-5" /> หน้าหลัก</button>
                 </div>
               </div>
             )}
