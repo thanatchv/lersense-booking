@@ -13,7 +13,10 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- 🟢 โหลด SDK ของ Supabase และ LINE LIFF -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body class="m-0 p-0">
   <div id="root"></div>
@@ -22,18 +25,20 @@
     const { useState, useEffect } = React;
     const { createClient } = supabase;
 
-    // 🔴 1. นำ API Key และ URL จาก Supabase มาใส่ตรงนี้ 🔴
+    // 🔴 1. ตั้งค่า Supabase 🔴
     const SUPABASE_URL = 'https://fbbyvdejhivrdedggtkt.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiYnl2ZGVqaGl2cmRlZGdndGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMjYxMjIsImV4cCI6MjA5NjYwMjEyMn0.27i1ZEBIkpYsCAwTakNpjSmP4dRO9l53wSG5xSnRyfA';
-
     const isConfigured = !SUPABASE_URL.includes('วาง_');
     const supabaseClient = isConfigured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+    // 🔴 2. ตั้งค่า LIFF ID (ได้จากเว็บ LINE Developers) 🔴
+    const LIFF_ID = '2008899579-4H1nxNds'; 
 
     const Icon = ({ name, className }) => <i data-lucide={name} className={className}></i>;
 
     function App() {
       const [step, setStep] = useState('LOGIN'); 
-      const [loading, setLoading] = useState(false);
+      const [loading, setLoading] = useState(true); // เริ่มมาให้ Loading หมุนรอ LIFF ก่อน
       const [modal, setModal] = useState({ isOpen: false, title: '', message: '' });
       const [isDarkMode, setIsDarkMode] = useState(false);
       const [dbError, setDbError] = useState(false);
@@ -57,77 +62,138 @@
       
       const today = new Date().toISOString().split('T')[0];
 
-      // โหลดไอคอน
       useEffect(() => {
         if (window.lucide) window.lucide.createIcons();
       });
 
-      // ดึงข้อมูลและตรวจสอบสถานะล็อกอินตอนเปิดเว็บ
+      // --- 🟢 ขั้นตอนเริ่มต้น (Init LIFF & Supabase) ---
       useEffect(() => {
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setIsDarkMode(true);
         fetchSupabaseData();
-
-        // 🟡 [เพิ่มใหม่] ตรวจสอบว่าเคยล็อกอินค้างไว้หรือไม่
-        if (supabaseClient) {
-          supabaseClient.auth.getSession().then(({ data: { session } }) => {
-            if (session) handleSession(session);
-          });
-
-          // ดักจับเหตุการณ์เวลาล็อกอินสำเร็จ
-          const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-            if (session) handleSession(session);
-          });
-
-          return () => subscription.unsubscribe();
-        }
+        
+        // เริ่มต้น LIFF ทันทีที่เปิดหน้าเว็บ
+        initializeApp();
       }, []);
+
+      const initializeApp = async () => {
+        // ถ้าเป็นโหมดจำลอง (ยังไม่ได้ใส่ LIFF ID หรือ Supabase)
+        if (LIFF_ID.includes('วาง_') || !isConfigured) {
+          setLoading(false);
+          return;
+        }
+
+        try {
+          await liff.init({ liffId: LIFF_ID });
+          
+          // ตรวจสอบว่าเปิดใน LINE หรือล็อกอินในเว็บ Browser หรือยัง
+          if (liff.isLoggedIn()) {
+            handleLiffLoginSuccess();
+          } else {
+            // ถ่ายังไม่ล็อกอิน (เปิดใน Browser ปกติ) ให้หยุดหมุน ให้ลูกค้ากดปุ่มล็อกอินเอง
+            setLoading(false);
+          }
+        } catch (err) {
+          console.error('LIFF Init Error:', err);
+          setModal({ isOpen: true, title: 'ข้อผิดพลาดระบบ', message: 'ไม่สามารถเชื่อมต่อ LINE ได้' });
+          setLoading(false);
+        }
+      };
 
       const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-      // 🟡 [เพิ่มใหม่] ฟังก์ชันจัดการหลังจากล็อกอินผ่าน LINE สำเร็จ
-      const handleSession = async (session) => {
+      // --- 🟢 จัดการหลังล็อกอิน LINE สำเร็จ ---
+      const handleLiffLoginSuccess = async () => {
         setLoading(true);
-        const user = session.user;
-
         try {
-          // เช็คว่ามีข้อมูลในตาราง profiles หรือยัง (เคยสมัครสมาชิกไหม)
-          const { data: profile, error } = await supabaseClient
+          const profile = await liff.getProfile(); // ดึงข้อมูลจาก LINE
+          const lineUserId = profile.userId; // ไอดีที่ไม่ซ้ำกันของแต่ละคน
+
+          // เอา lineUserId ไปหาใน Supabase ว่าเคยสมัครยัง
+          const { data: existingUser, error } = await supabaseClient
             .from('profiles')
             .select('*')
-            .eq('id', user.id)
+            .eq('line_user_id', lineUserId) // ค้นหาด้วย line_user_id
             .maybeSingle();
 
-          if (profile) {
-            // เคยสมัครแล้ว -> ข้ามไปหน้าจองคิวเลย
+          if (existingUser) {
+            // เคยสมัครแล้ว -> ดึงข้อมูลและไปหน้าจอง
             setUserProfile({ 
-              id: profile.id, 
-              name: `${profile.first_name} ${profile.last_name}`, 
-              phone: profile.phone, 
-              tier: profile.tier 
+              id: existingUser.id, 
+              name: `${existingUser.first_name} ${existingUser.last_name}`, 
+              phone: existingUser.phone, 
+              tier: existingUser.tier 
             });
             setStep('BOOKING');
           } else {
-            // ยังไม่เคยสมัคร -> ดึงชื่อและรูปจาก LINE มาแสดงในหน้าสมัคร
-            const metadata = user.user_metadata || {};
+            // เป็นผู้ใช้ใหม่ -> ไปหน้าสมัคร
             setLineProfile({
-              displayName: metadata.full_name || metadata.name || 'ผู้ใช้ LINE',
-              pictureUrl: metadata.avatar_url || 'https://ui-avatars.com/api/?name=User&background=00c300&color=fff'
+              displayName: profile.displayName,
+              pictureUrl: profile.pictureUrl,
+              userId: lineUserId // เก็บไว้เพื่อบันทึกลงฐานข้อมูลตอนสมัคร
             });
-            
-            // แยกชื่อ-นามสกุลจาก LINE มาใส่ให้ก่อนถ้ามี
-            const nameParts = (metadata.full_name || metadata.name || '').split(' ');
-            setFormData(prev => ({ 
-              ...prev, 
-              firstName: nameParts[0] || '', 
-              lastName: nameParts[1] || '' 
-            }));
-            
             setStep('REGISTER');
           }
         } catch (err) {
-          console.error("Session Error:", err);
+          console.error("Login Check Error:", err);
+          setModal({ isOpen: true, title: 'ข้อผิดพลาด', message: 'ดึงข้อมูลไม่สำเร็จ' });
         }
         setLoading(false);
+      };
+
+      // --- 🟢 ปุ่มล็อกอินหน้าแรก (สำหรับเปิดในเว็บปกติ) ---
+      const handleLoginButton = () => {
+        if (LIFF_ID.includes('วาง_')) {
+          // โหมดจำลอง
+          setLoading(true);
+          setTimeout(() => {
+            setLoading(false);
+            setLineProfile({ displayName: 'สมหญิง รักสปา', pictureUrl: 'https://ui-avatars.com/api/?name=Somying+R&background=00c300&color=fff&size=150', userId: 'U123456789mock' });
+            setFormData(prev => ({ ...prev, firstName: 'สมหญิง', lastName: 'รักสปา' }));
+            setStep('REGISTER');
+          }, 800);
+        } else {
+          // ล็อกอิน LINE จริง
+          liff.login(); 
+        }
+      };
+
+      // --- 🟢 บันทึกการสมัครสมาชิก ---
+      const handleRegister = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        let currentUserId = 'MOCK_USER_ID';
+
+        if (supabaseClient && lineProfile) {
+          try {
+            // สร้างลูกค้าใหม่ และผูก line_user_id เอาไว้
+            const { data, error } = await supabaseClient.from('profiles').insert([{
+              line_user_id: lineProfile.userId, // สำคัญมาก! เพื่อให้จำได้ว่า LINE นี้คือใคร
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+              email: formData.email,
+              phone: formData.phone,
+              dob: formData.dob,
+              address: formData.address,
+              pdpa_consented: formData.pdpaConsent,
+              tier: 'Classic'
+            }]).select();
+
+            if (error) throw error;
+            if (data && data[0]) currentUserId = data[0].id;
+          } catch (err) {
+            console.error("Register Error:", err);
+            setModal({ isOpen: true, title: 'สมัครสมาชิกไม่สำเร็จ', message: err.message });
+            setLoading(false);
+            return;
+          }
+        }
+
+        setTimeout(() => {
+          setLoading(false);
+          setUserProfile({ id: currentUserId, name: `${formData.firstName} ${formData.lastName}`, phone: formData.phone, tier: 'Classic Member', points: 0 });
+          setStep('BOOKING');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 800);
       };
 
       const fetchSupabaseData = async () => {
@@ -193,63 +259,40 @@
         }
       }, [formData.serviceId, formData.time, servicesData]);
 
-      // 🟡 [แก้ไขใหม่] ปุ่มกดเข้าสู่ระบบผ่าน LINE
-      const handleLineLogin = async () => {
-        if (!supabaseClient) {
-          // โหมดจำลองเหมือนเดิม ถ้ายังไม่ตั้งค่า Supabase
-          setLoading(true);
-          setTimeout(() => {
-            setLoading(false);
-            setLineProfile({ displayName: 'สมหญิง รักสปา', pictureUrl: 'https://ui-avatars.com/api/?name=Somying+R&background=00c300&color=fff&size=150' });
-            setFormData(prev => ({ ...prev, firstName: 'สมหญิง', lastName: 'รักสปา' }));
-            setStep('REGISTER');
-          }, 800);
+      const handleBookingSubmit = async (e) => {
+        e.preventDefault();
+        const { pregnant, highBp, surgery } = formData.healthRisks;
+        if (pregnant || highBp || surgery) {
+          setModal({ isOpen: true, title: 'ไม่สามารถทำรายการได้', message: 'ท่านมีปัญหาสุขภาพที่อยู่ในกลุ่มเสี่ยง กรุณาติดต่อแอดมินเพื่อประเมินการรับบริการครับ' });
           return;
         }
 
-        // เชื่อมต่อระบบ Auth ของ Supabase (เปิดหน้าต่างล็อกอินของ LINE)
-        const { error } = await supabaseClient.auth.signInWithOAuth({
-          provider: 'line',
-          options: {
-            redirectTo: window.location.origin // ล็อกอินเสร็จให้เด้งกลับมาหน้านี้
-          }
-        });
-
-        if (error) {
-          setModal({ isOpen: true, title: 'ล็อกอินล้มเหลว', message: error.message });
-        }
-      };
-
-      // 🟡 [แก้ไขใหม่] การบันทึกข้อมูลสมัครสมาชิกให้ผูกกับบัญชีที่ล็อกอิน
-      const handleRegister = async (e) => {
-        e.preventDefault();
         setLoading(true);
-        let currentUserId = 'MOCK_USER_ID';
+        const newBookingRef = `BK-${new Date().getTime().toString().slice(-6)}`; 
+        setBookingRef(newBookingRef);
 
         if (supabaseClient) {
           try {
-            // ดึง ID ของคนที่เพิ่งล็อกอินเข้ามา
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session) throw new Error('ไม่พบข้อมูลการล็อกอิน');
-            
-            currentUserId = session.user.id;
-
-            const { error } = await supabaseClient.from('profiles').insert([{
-              id: currentUserId, // 📌 ผูกไอดีกับ Auth อัตโนมัติ
-              first_name: formData.firstName,
-              last_name: formData.lastName,
-              email: formData.email,
-              phone: formData.phone,
-              dob: formData.dob,
-              address: formData.address,
-              pdpa_consented: formData.pdpaConsent,
-              tier: 'Classic'
+            const selectedService = servicesData.find(s => s.id === formData.serviceId) || { price: 0 };
+            const { error } = await supabaseClient.from('bookings').insert([{
+                booking_ref: newBookingRef,
+                customer_id: userProfile.id, 
+                service_id: formData.serviceId,
+                branch_id: formData.locationId, 
+                booking_date: formData.date,
+                start_time: formData.time + ":00", 
+                end_time: formData.time + ":00", 
+                buffer_end_time: formData.time + ":00",
+                total_price: selectedService.price * parseInt(formData.pax),
+                deposit_paid: 0,
+                health_risks: formData.healthRisks,
+                equipments: formData.equipments,
+                status: 'pending_payment'
             }]);
-            
             if (error) throw error;
           } catch (err) {
-            console.error("Register Error:", err);
-            setModal({ isOpen: true, title: 'ข้อผิดพลาด', message: 'ไม่สามารถสมัครสมาชิกได้: ' + err.message });
+            console.error("Insert Booking Error: ", err);
+            setModal({ isOpen: true, title: 'ข้อผิดพลาด', message: 'ไม่สามารถบันทึกการจองได้: ' + err.message });
             setLoading(false);
             return;
           }
@@ -363,7 +406,7 @@
                 <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--text-main)' }}>ยินดีต้อนรับสู่ Lersense</h2>
                 <p className="text-sm mb-8 px-4" style={{ color: 'var(--text-muted)' }}>กรุณาเข้าสู่ระบบเพื่อดำเนินการจองคิว และสะสมคะแนนสมาชิก</p>
                 <div className="w-full max-w-sm glass-panel p-6 rounded-3xl">
-                  <button onClick={handleLineLogin} className="w-full btn-line py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2 text-lg">
+                  <button onClick={handleLoginButton} className="w-full btn-line py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2 text-lg">
                     <Icon name="message-circle" className="w-6 h-6" /> เข้าสู่ระบบด้วย LINE
                   </button>
                 </div>
@@ -377,6 +420,17 @@
                   <p className="text-sm" style={{ color: 'var(--text-muted)' }}>กรุณากรอกข้อมูลที่จำเป็นเพื่อเชื่อมต่อกับบัญชีของท่าน</p>
                 </div>
                 <form onSubmit={handleRegister} className="glass-panel rounded-[28px] overflow-hidden p-6">
+                  {/* แสดงโปรไฟล์ LINE (ถ้ามี) */}
+                  {lineProfile && (
+                    <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl shadow-inner border" style={{ background: isDarkMode ? 'rgba(0,195,0,0.1)' : 'rgba(0,195,0,0.05)', borderColor: 'rgba(0,195,0,0.2)' }}>
+                      <img src={lineProfile.pictureUrl} alt="LINE Avatar" className="w-12 h-12 rounded-full border-2 border-[#00c300] shadow-sm" />
+                      <div>
+                        <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>เชื่อมต่อกับบัญชี LINE</p>
+                        <p className="font-bold text-sm text-[#00c300]">{lineProfile.displayName}</p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-5">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>ชื่อ</label><div className="input-shell rounded-2xl flex items-center pl-3"><input type="text" name="firstName" required className="form-element px-2" value={formData.firstName} onChange={handleChange} /></div></div>
@@ -407,7 +461,6 @@
                       </div>
                     </div>
 
-                    {/* เพิ่มช่องกรอกที่อยู่ */}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>ที่อยู่</label>
                       <div className="input-shell rounded-2xl flex items-start pl-3 pt-3">
@@ -418,7 +471,6 @@
                       </div>
                     </div>
 
-                    {/* เพิ่มช่องยินยอม PDPA */}
                     <div className="mt-2 p-4 rounded-2xl" style={{ background: 'var(--bg-element)', border: '1px solid var(--border-glass)' }}>
                       <label className="flex items-start gap-3 cursor-pointer">
                         <input type="checkbox" name="pdpaConsent" required checked={formData.pdpaConsent} onChange={handleChange} className="w-5 h-5 accent-purple-600 rounded mt-0.5" />
