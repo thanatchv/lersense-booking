@@ -57,16 +57,78 @@
       
       const today = new Date().toISOString().split('T')[0];
 
+      // โหลดไอคอน
       useEffect(() => {
         if (window.lucide) window.lucide.createIcons();
       });
 
+      // ดึงข้อมูลและตรวจสอบสถานะล็อกอินตอนเปิดเว็บ
       useEffect(() => {
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setIsDarkMode(true);
         fetchSupabaseData();
+
+        // 🟡 [เพิ่มใหม่] ตรวจสอบว่าเคยล็อกอินค้างไว้หรือไม่
+        if (supabaseClient) {
+          supabaseClient.auth.getSession().then(({ data: { session } }) => {
+            if (session) handleSession(session);
+          });
+
+          // ดักจับเหตุการณ์เวลาล็อกอินสำเร็จ
+          const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+            if (session) handleSession(session);
+          });
+
+          return () => subscription.unsubscribe();
+        }
       }, []);
 
       const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+      // 🟡 [เพิ่มใหม่] ฟังก์ชันจัดการหลังจากล็อกอินผ่าน LINE สำเร็จ
+      const handleSession = async (session) => {
+        setLoading(true);
+        const user = session.user;
+
+        try {
+          // เช็คว่ามีข้อมูลในตาราง profiles หรือยัง (เคยสมัครสมาชิกไหม)
+          const { data: profile, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (profile) {
+            // เคยสมัครแล้ว -> ข้ามไปหน้าจองคิวเลย
+            setUserProfile({ 
+              id: profile.id, 
+              name: `${profile.first_name} ${profile.last_name}`, 
+              phone: profile.phone, 
+              tier: profile.tier 
+            });
+            setStep('BOOKING');
+          } else {
+            // ยังไม่เคยสมัคร -> ดึงชื่อและรูปจาก LINE มาแสดงในหน้าสมัคร
+            const metadata = user.user_metadata || {};
+            setLineProfile({
+              displayName: metadata.full_name || metadata.name || 'ผู้ใช้ LINE',
+              pictureUrl: metadata.avatar_url || 'https://ui-avatars.com/api/?name=User&background=00c300&color=fff'
+            });
+            
+            // แยกชื่อ-นามสกุลจาก LINE มาใส่ให้ก่อนถ้ามี
+            const nameParts = (metadata.full_name || metadata.name || '').split(' ');
+            setFormData(prev => ({ 
+              ...prev, 
+              firstName: nameParts[0] || '', 
+              lastName: nameParts[1] || '' 
+            }));
+            
+            setStep('REGISTER');
+          }
+        } catch (err) {
+          console.error("Session Error:", err);
+        }
+        setLoading(false);
+      };
 
       const fetchSupabaseData = async () => {
         if (!supabaseClient) {
@@ -131,16 +193,34 @@
         }
       }, [formData.serviceId, formData.time, servicesData]);
 
-      const handleLineLogin = () => {
-        setLoading(true);
-        setTimeout(() => {
-          setLoading(false);
-          setLineProfile({ displayName: 'สมหญิง รักสปา', pictureUrl: 'https://ui-avatars.com/api/?name=Somying+R&background=00c300&color=fff&size=150' });
-          setFormData(prev => ({ ...prev, firstName: 'สมหญิง', lastName: 'รักสปา' }));
-          setStep('REGISTER');
-        }, 800);
+      // 🟡 [แก้ไขใหม่] ปุ่มกดเข้าสู่ระบบผ่าน LINE
+      const handleLineLogin = async () => {
+        if (!supabaseClient) {
+          // โหมดจำลองเหมือนเดิม ถ้ายังไม่ตั้งค่า Supabase
+          setLoading(true);
+          setTimeout(() => {
+            setLoading(false);
+            setLineProfile({ displayName: 'สมหญิง รักสปา', pictureUrl: 'https://ui-avatars.com/api/?name=Somying+R&background=00c300&color=fff&size=150' });
+            setFormData(prev => ({ ...prev, firstName: 'สมหญิง', lastName: 'รักสปา' }));
+            setStep('REGISTER');
+          }, 800);
+          return;
+        }
+
+        // เชื่อมต่อระบบ Auth ของ Supabase (เปิดหน้าต่างล็อกอินของ LINE)
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+          provider: 'line',
+          options: {
+            redirectTo: window.location.origin // ล็อกอินเสร็จให้เด้งกลับมาหน้านี้
+          }
+        });
+
+        if (error) {
+          setModal({ isOpen: true, title: 'ล็อกอินล้มเหลว', message: error.message });
+        }
       };
 
+      // 🟡 [แก้ไขใหม่] การบันทึกข้อมูลสมัครสมาชิกให้ผูกกับบัญชีที่ล็อกอิน
       const handleRegister = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -148,7 +228,14 @@
 
         if (supabaseClient) {
           try {
-            const { data, error } = await supabaseClient.from('profiles').insert([{
+            // ดึง ID ของคนที่เพิ่งล็อกอินเข้ามา
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) throw new Error('ไม่พบข้อมูลการล็อกอิน');
+            
+            currentUserId = session.user.id;
+
+            const { error } = await supabaseClient.from('profiles').insert([{
+              id: currentUserId, // 📌 ผูกไอดีกับ Auth อัตโนมัติ
               first_name: formData.firstName,
               last_name: formData.lastName,
               email: formData.email,
@@ -157,56 +244,12 @@
               address: formData.address,
               pdpa_consented: formData.pdpaConsent,
               tier: 'Classic'
-            }]).select();
+            }]);
+            
             if (error) throw error;
-            if (data && data[0]) currentUserId = data[0].id;
           } catch (err) {
             console.error("Register Error:", err);
-          }
-        }
-
-        setTimeout(() => {
-          setLoading(false);
-          setUserProfile({ id: currentUserId, name: `${formData.firstName} ${formData.lastName}`, phone: formData.phone, tier: 'Classic Member', points: 0 });
-          setStep('BOOKING');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 800);
-      };
-
-      const handleBookingSubmit = async (e) => {
-        e.preventDefault();
-        const { pregnant, highBp, surgery } = formData.healthRisks;
-        if (pregnant || highBp || surgery) {
-          setModal({ isOpen: true, title: 'ไม่สามารถทำรายการได้', message: 'ท่านมีปัญหาสุขภาพที่อยู่ในกลุ่มเสี่ยง กรุณาติดต่อแอดมินเพื่อประเมินการรับบริการครับ' });
-          return;
-        }
-
-        setLoading(true);
-        const newBookingRef = `BK-${new Date().getTime().toString().slice(-6)}`; 
-        setBookingRef(newBookingRef);
-
-        if (supabaseClient) {
-          try {
-            const selectedService = servicesData.find(s => s.id === formData.serviceId) || { price: 0 };
-            const { error } = await supabaseClient.from('bookings').insert([{
-                booking_ref: newBookingRef,
-                customer_id: userProfile.id, 
-                service_id: formData.serviceId,
-                branch_id: formData.locationId, 
-                booking_date: formData.date,
-                start_time: formData.time + ":00", 
-                end_time: formData.time + ":00", 
-                buffer_end_time: formData.time + ":00",
-                total_price: selectedService.price * parseInt(formData.pax),
-                deposit_paid: 0,
-                health_risks: formData.healthRisks,
-                equipments: formData.equipments,
-                status: 'pending_payment'
-            }]);
-            if (error) throw error;
-          } catch (err) {
-            console.error("Insert Booking Error: ", err);
-            setModal({ isOpen: true, title: 'ข้อผิดพลาด', message: 'ไม่สามารถบันทึกการจองได้: ' + err.message });
+            setModal({ isOpen: true, title: 'ข้อผิดพลาด', message: 'ไม่สามารถสมัครสมาชิกได้: ' + err.message });
             setLoading(false);
             return;
           }
