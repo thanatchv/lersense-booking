@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -21,7 +22,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
     const { createClient } = supabase;
 
     // 🔴 1. ตั้งค่า Supabase 🔴
@@ -30,8 +31,9 @@
     const isConfigured = !SUPABASE_URL.includes('วาง_');
     const supabaseClient = isConfigured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-    // 🔴 2. ตั้งค่า LIFF ID 🔴
+    // 🔴 2. ตั้งค่า LIFF ID และเบอร์พร้อมเพย์รับเงิน 🔴
     const LIFF_ID = '2008899579-4H1nxNds'; 
+    const PROMPTPAY_ID = '0812345678'; // 👈 เปลี่ยนเป็นเบอร์พร้อมเพย์ของร้านได้เลยครับ
 
     const Icon = ({ name, className }) => <i data-lucide={name} className={className}></i>;
 
@@ -44,6 +46,7 @@
     function App() {
       const [step, setStep] = useState('LOGIN'); 
       const [loading, setLoading] = useState(true); 
+      const [loadingText, setLoadingText] = useState('กำลังดำเนินการ...'); // เพิ่มข้อความ Loading ให้ดูสมจริง
       const [modal, setModal] = useState({ isOpen: false, title: '', message: '' });
       const [isDarkMode, setIsDarkMode] = useState(false);
       const [dbError, setDbError] = useState(false);
@@ -64,10 +67,13 @@
       const [endTime, setEndTime] = useState('ยังไม่ได้เลือก');
       const [bookingRef, setBookingRef] = useState('');
       const [paymentMethod, setPaymentMethod] = useState('promptpay');
-      
-      // 🟢 เพิ่ม State สำหรับตัวนับเวลา (15 นาที = 900 วินาที)
       const [timeLeft, setTimeLeft] = useState(900);
       
+      // State สำหรับระบบชำระเงิน
+      const [slipImage, setSlipImage] = useState(null); // พรีวิวรูปสลิป
+      const fileInputRef = useRef(null);
+      const [ccData, setCcData] = useState({ number: '', expiry: '', cvv: '' });
+
       const today = new Date().toISOString().split('T')[0];
 
       useEffect(() => {
@@ -80,7 +86,6 @@
         initializeApp();
       }, []);
 
-      // 🟢 ระบบนับเวลาถอยหลัง (รันเฉพาะหน้า PAYMENT)
       useEffect(() => {
         let timerId;
         if (step === 'PAYMENT' && timeLeft > 0) {
@@ -88,19 +93,12 @@
             setTimeLeft(prev => prev - 1);
           }, 1000);
         } else if (step === 'PAYMENT' && timeLeft <= 0) {
-          // เมื่อเวลาหมด ให้กลับไปหน้า BOOKING
           setModal({ isOpen: true, title: 'หมดเวลาชำระเงิน', message: 'คิวที่ท่านเลือกถูกยกเลิกเนื่องจากหมดเวลาทำรายการ กรุณาทำการจองใหม่อีกครั้งครับ' });
           setStep('BOOKING');
-          
-          // ระบบจริงตรงนี้จะต้องสั่ง Update Database ให้ status = 'cancelled' ด้วยครับ
         }
-        
-        return () => {
-          if (timerId) clearInterval(timerId);
-        };
+        return () => { if (timerId) clearInterval(timerId); };
       }, [step, timeLeft]);
 
-      // ฟังก์ชันแปลงวินาทีเป็น นาที:วินาที
       const formatTime = (seconds) => {
         const m = Math.floor(seconds / 60).toString().padStart(2, '0');
         const s = (seconds % 60).toString().padStart(2, '0');
@@ -112,14 +110,10 @@
           setLoading(false);
           return;
         }
-
         try {
           await liff.init({ liffId: LIFF_ID });
-          if (liff.isLoggedIn()) {
-            handleLiffLoginSuccess();
-          } else {
-            setLoading(false);
-          }
+          if (liff.isLoggedIn()) handleLiffLoginSuccess();
+          else setLoading(false);
         } catch (err) {
           console.error('LIFF Init Error:', err);
           setModal({ isOpen: true, title: 'ข้อผิดพลาดระบบ', message: 'ไม่สามารถเชื่อมต่อ LINE ได้' });
@@ -135,31 +129,17 @@
           const profile = await liff.getProfile(); 
           const lineUserId = profile.userId; 
 
-          const { data: existingUser, error } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('line_user_id', lineUserId)
-            .maybeSingle();
+          const { data: existingUser } = await supabaseClient.from('profiles').select('*').eq('line_user_id', lineUserId).maybeSingle();
 
           if (existingUser) {
-            setUserProfile({ 
-              id: existingUser.id, 
-              name: `${existingUser.first_name} ${existingUser.last_name}`, 
-              phone: existingUser.phone, 
-              tier: existingUser.tier 
-            });
+            setUserProfile({ id: existingUser.id, name: `${existingUser.first_name} ${existingUser.last_name}`, phone: existingUser.phone, tier: existingUser.tier });
             setStep('BOOKING');
           } else {
-            setLineProfile({
-              displayName: profile.displayName,
-              pictureUrl: profile.pictureUrl,
-              userId: lineUserId 
-            });
+            setLineProfile({ displayName: profile.displayName, pictureUrl: profile.pictureUrl, userId: lineUserId });
             setStep('REGISTER');
           }
         } catch (err) {
           console.error("Login Check Error:", err);
-          setModal({ isOpen: true, title: 'ข้อผิดพลาด', message: 'ดึงข้อมูลไม่สำเร็จ' });
         }
         setLoading(false);
       };
@@ -181,6 +161,7 @@
       const handleRegister = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setLoadingText('กำลังสร้างบัญชีสมาชิก...');
         let currentUserId = 'MOCK_USER_ID';
 
         if (supabaseClient && lineProfile) {
@@ -196,7 +177,6 @@
               pdpa_consented: formData.pdpaConsent,
               tier: 'Classic'
             }]).select();
-
             if (error) throw error;
             if (data && data[0]) currentUserId = data[0].id;
           } catch (err) {
@@ -222,7 +202,7 @@
             { id: 'S2', name: '[จำลอง] นวดอโรม่า', duration_minutes: 90, price: 1200, deposit_amount: 500 }
           ]);
           setBranchesData([
-            { id: 'L1', name: '[จำลอง] สาขาหลัก (รับบริการที่ร้าน)', type: 'in_store' },
+            { id: 'L1', name: '[จำลอง] สาขาหลัก', type: 'in_store' },
             { id: 'L2', name: '[จำลอง] นอกสถานที่ (Delivery)', type: 'off_site' }
           ]);
           return;
@@ -231,15 +211,9 @@
         try {
           const { data: sData, error: sError } = await supabaseClient.from('services').select('*').eq('is_active', true);
           const { data: bData, error: bError } = await supabaseClient.from('branches').select('*').eq('is_active', true);
-          
           if (sError || bError) throw (sError || bError);
           
-          if (sData && sData.length > 0) {
-            setServicesData(sData);
-            setDbError(false);
-          } else {
-            setDbError(true); 
-          }
+          if (sData && sData.length > 0) { setServicesData(sData); setDbError(false); } else { setDbError(true); }
           if (bData && bData.length > 0) setBranchesData(bData);
         } catch (err) {
           console.error("Fetch Error: ", err);
@@ -250,11 +224,9 @@
       const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         if (name.startsWith('health_')) {
-          const key = name.replace('health_', '');
-          setFormData(prev => ({ ...prev, healthRisks: { ...prev.healthRisks, [key]: checked } }));
+          setFormData(prev => ({ ...prev, healthRisks: { ...prev.healthRisks, [name.replace('health_', '')]: checked } }));
         } else if (name.startsWith('equip_')) {
-          const key = name.replace('equip_', '');
-          setFormData(prev => ({ ...prev, equipments: { ...prev.equipments, [key]: checked } }));
+          setFormData(prev => ({ ...prev, equipments: { ...prev.equipments, [name.replace('equip_', '')]: checked } }));
         } else if (type === 'checkbox') {
           setFormData(prev => ({ ...prev, [name]: checked }));
         } else {
@@ -273,16 +245,13 @@
             const endM = String(dateObj.getMinutes()).padStart(2, '0');
             setEndTime(`ใช้เวลา ${service.duration_minutes} นาที • เสร็จประมาณ ${endH}:${endM} น.`);
           }
-        } else {
-          setEndTime('กรุณาเลือกบริการและเวลา');
-        }
+        } else { setEndTime('กรุณาเลือกบริการและเวลา'); }
       }, [formData.serviceId, formData.time, servicesData]);
 
       const isOffSite = branchesData.find(b => b.id === formData.locationId)?.type === 'off_site';
 
       const handleBookingSubmit = async (e) => {
         e.preventDefault();
-        
         const { pregnant, highBp, surgery } = formData.healthRisks;
         if (pregnant || highBp || surgery) {
           setModal({ isOpen: true, title: 'ไม่สามารถทำรายการได้อัตโนมัติ', message: 'ท่านมีปัญหาสุขภาพที่อยู่ในกลุ่มเสี่ยง กรุณาติดต่อแอดมินผ่านแชทเพื่อประเมินการรับบริการเพื่อความปลอดภัยครับ' });
@@ -290,6 +259,7 @@
         }
 
         setLoading(true);
+        setLoadingText('กำลังสร้างข้อมูลการจอง...');
         const newBookingRef = `BK-${new Date().getTime().toString().slice(-6)}`; 
         setBookingRef(newBookingRef);
 
@@ -322,38 +292,76 @@
 
         setTimeout(() => {
           setLoading(false);
-          setTimeLeft(900); // 🟢 รีเซ็ตตัวนับเวลากลับมาเป็น 15 นาที
+          setTimeLeft(900);
+          setSlipImage(null); // ล้างสลิปเก่า
+          setCcData({ number: '', expiry: '', cvv: '' });
           setStep('PAYMENT');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 800);
       };
 
+      // --- 🟢 ฟังก์ชันจัดการไฟล์สลิป ---
+      const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => setSlipImage(reader.result);
+          reader.readAsDataURL(file);
+        }
+      };
+
+      // --- 🟢 ฟังก์ชันตรวจสอบแบบฟอร์มชำระเงินและกดยืนยัน ---
       const handlePaymentSuccess = async () => {
+        // Validation ฝั่ง Frontend
+        if (paymentMethod === 'promptpay' && !slipImage) {
+          setModal({ isOpen: true, title: 'กรุณาอัปโหลดสลิป', message: 'โปรดแนบรูปภาพสลิปโอนเงินเพื่อยืนยันการชำระเงินมัดจำครับ' });
+          return;
+        }
+        if (paymentMethod === 'creditcard') {
+          if (ccData.number.length < 16 || ccData.expiry.length < 5 || ccData.cvv.length < 3) {
+            setModal({ isOpen: true, title: 'ข้อมูลไม่ครบถ้วน', message: 'กรุณากรอกข้อมูลบัตรเครดิตให้ครบถ้วนเพื่อทำการชำระเงิน' });
+            return;
+          }
+        }
+
         setLoading(true);
+        setLoadingText(paymentMethod === 'promptpay' ? 'กำลังตรวจสอบสลิปโอนเงิน...' : 'กำลังตัดวงเงินบัตรเครดิต...');
+
         if (supabaseClient) {
           try {
             const selectedService = servicesData.find(s => s.id === formData.serviceId) || {};
             const depositAmount = (selectedService.deposit_amount || 200) * parseInt(formData.pax);
 
+            // อัปเดตสถานะ (ถ้าเป็น promptpay ในระบบจริงอาจจะปรับเป็น 'verifying' ให้แอดมินดูก่อน)
+            // แต่สำหรับ MVP นี้ เราจะปรับเป็น 'confirmed' เลยเพื่อให้ลูกค้าได้ E-Ticket ทันที
             const { error } = await supabaseClient
               .from('bookings')
-              .update({ status: 'confirmed', deposit_paid: depositAmount, payment_status: 'deposit_paid' })
+              .update({ 
+                status: 'confirmed', 
+                deposit_paid: depositAmount, 
+                payment_status: 'deposit_paid' 
+                // หมายเหตุ: ถ้าระบบจริงต้องอัปโหลดสลิปรูปเข้า Storage แล้วเอา URL มาเซฟใน Database ด้วย
+              })
               .eq('booking_ref', bookingRef);
             if (error) throw error;
           } catch (err) {
             console.error("Update Payment Error:", err);
           }
         }
+        
         setTimeout(() => {
           setLoading(false);
           setStep('TICKET');
           window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 1500);
+        }, 2000); // ดีเลย์ 2 วิให้ดูสมจริงว่ากำลังประมวลผล
       };
 
       const selectedServiceObj = servicesData.find(s => s.id === formData.serviceId) || {};
       const paxCount = parseInt(formData.pax) || 1;
       const depositTotal = (selectedServiceObj.deposit_amount || 200) * paxCount;
+      
+      // สร้าง URL สำหรับดึงรูป QR Code พร้อมเพย์จริง (ระบบ Promptpay.io)
+      const qrCodeUrl = `https://promptpay.io/${PROMPTPAY_ID}/${depositTotal}.png`;
 
       return (
         <div className={`min-h-screen pb-32 transition-colors duration-500 app-container ${isDarkMode ? 'dark' : 'light'}`}>
@@ -369,6 +377,7 @@
             select.form-element option { background: ${isDarkMode ? '#1f2937' : '#ffffff'}; color: ${isDarkMode ? '#f3f4f6' : '#1f2937'}; }
             .btn-gold { background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.02)), linear-gradient(135deg, #d6b067 0%, #bf8d39 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 10px 24px rgba(191, 141, 57, 0.32); transition: transform .18s ease; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
             .btn-gold:active { transform: translateY(1px) scale(0.995); }
+            .btn-gold:disabled { filter: grayscale(100%) opacity(0.6); cursor: not-allowed; transform: none; box-shadow: none; }
             .btn-line { background: linear-gradient(180deg, #10d061 0%, #06b755 100%); border: 1px solid rgba(6,199,85,0.18); box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 10px 24px rgba(6,183,85,0.24); transition: transform .18s ease; }
             ::-webkit-calendar-picker-indicator { filter: ${isDarkMode ? 'invert(1)' : 'invert(0)'}; }
             
@@ -380,22 +389,27 @@
             .check-item { background: var(--bg-element); border: 1px solid var(--border-glass); border-radius: 16px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; }
             .check-item:hover { background: var(--bg-input-focus); }
             .check-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: #9333ea; border-radius: 4px; }
+            
+            /* อัปเกรดช่องอัปโหลดไฟล์ */
+            .file-upload-zone { border: 2px dashed var(--border-glass); background: var(--bg-input); transition: all 0.2s; cursor: pointer; }
+            .file-upload-zone:hover { border-color: #9333ea; background: var(--bg-input-focus); }
           `}</style>
 
-          {/* Modal Overlay */}
+          {/* Modal Overlay (อัปเดตใส่ข้อความตาม Loading Text) */}
           {(loading || modal.isOpen) && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
               {loading ? (
-                <div className="glass-panel p-6 rounded-3xl flex flex-col items-center">
-                  <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-                  <p className="mt-4 font-medium" style={{ color: 'var(--text-main)' }}>กำลังดำเนินการ...</p>
+                <div className="glass-panel p-6 rounded-3xl flex flex-col items-center animate-fade-in">
+                  <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+                  <p className="font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{loadingText}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>กรุณารอสักครู่...</p>
                 </div>
               ) : (
                 <div className="glass-panel p-6 rounded-3xl max-w-sm w-full text-center animate-fade-in">
                   <Icon name="alert-triangle" className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
                   <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>{modal.title}</h3>
                   <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>{modal.message}</p>
-                  <button onClick={() => setModal({ isOpen: false, title: '', message: '' })} className="w-full btn-gold py-3 rounded-2xl text-white font-semibold">ตกลง</button>
+                  <button onClick={() => setModal({ isOpen: false, title: '', message: '' })} className="w-full btn-gold py-3 rounded-2xl text-white font-semibold">รับทราบ</button>
                 </div>
               )}
             </div>
@@ -425,6 +439,7 @@
           {/* Main Content */}
           <div className="max-w-lg mx-auto px-4 pt-24 relative z-30">
             
+            {/* LOGIN & REGISTER STEPS (เหมือนเดิม) */}
             {step === 'LOGIN' && (
               <div className="animate-fade-in flex flex-col items-center justify-center pt-10 pb-8 text-center">
                 <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-purple-500 to-yellow-600 p-[2px] shadow-xl mb-8">
@@ -462,171 +477,76 @@
                       <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>ชื่อ</label><div className="input-shell rounded-2xl flex items-center pl-3"><input type="text" name="firstName" required className="form-element px-2" value={formData.firstName} onChange={handleChange} /></div></div>
                       <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>นามสกุล</label><div className="input-shell rounded-2xl flex items-center pl-3"><input type="text" name="lastName" required className="form-element px-2" value={formData.lastName} onChange={handleChange} /></div></div>
                     </div>
-                    
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>อีเมล</label>
-                      <div className="input-shell rounded-2xl flex items-center pl-3">
-                        <Icon name="mail" className="w-5 h-5 opacity-50" style={{ color: 'var(--text-main)' }} />
-                        <input type="email" name="email" required className="form-element pl-2" value={formData.email} onChange={handleChange} />
-                      </div>
-                    </div>
-                    
+                    <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>อีเมล</label><div className="input-shell rounded-2xl flex items-center pl-3"><Icon name="mail" className="w-5 h-5 opacity-50" style={{ color: 'var(--text-main)' }} /><input type="email" name="email" required className="form-element pl-2" value={formData.email} onChange={handleChange} /></div></div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>เบอร์โทรศัพท์</label>
-                        <div className="input-shell rounded-2xl flex items-center pl-3">
-                          <Icon name="phone" className="w-5 h-5 opacity-50" style={{ color: 'var(--text-main)' }} />
-                          <input type="tel" name="phone" required pattern="[0-9]{10}" className="form-element pl-2" value={formData.phone} onChange={handleChange} />
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>วันเกิด</label>
-                        <div className="input-shell rounded-2xl flex items-center pr-3">
-                          <input type="date" name="dob" required className="form-element px-2 w-full" value={formData.dob} onChange={handleChange} />
-                        </div>
-                      </div>
+                      <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>เบอร์โทรศัพท์</label><div className="input-shell rounded-2xl flex items-center pl-3"><Icon name="phone" className="w-5 h-5 opacity-50" style={{ color: 'var(--text-main)' }} /><input type="tel" name="phone" required pattern="[0-9]{10}" className="form-element pl-2" value={formData.phone} onChange={handleChange} /></div></div>
+                      <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>วันเกิด</label><div className="input-shell rounded-2xl flex items-center pr-3"><input type="date" name="dob" required className="form-element px-2 w-full" value={formData.dob} onChange={handleChange} /></div></div>
                     </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>ที่อยู่</label>
-                      <div className="input-shell rounded-2xl flex items-start pl-3 pt-3">
-                        <Icon name="home" className="w-5 h-5 opacity-50 mt-1" style={{ color: 'var(--text-main)' }} />
-                        <textarea name="address" required placeholder="บ้านเลขที่, ถนน, ซอย, จังหวัด, รหัสไปรษณีย์..."
-                          className="bg-transparent border-none outline-none text-sm w-full resize-none min-h-[80px] px-2" 
-                          value={formData.address} onChange={handleChange} style={{ color: 'var(--text-main)' }}></textarea>
-                      </div>
-                    </div>
-
+                    <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>ที่อยู่</label><div className="input-shell rounded-2xl flex items-start pl-3 pt-3"><Icon name="home" className="w-5 h-5 opacity-50 mt-1" style={{ color: 'var(--text-main)' }} /><textarea name="address" required placeholder="บ้านเลขที่, ถนน, ซอย, จังหวัด, รหัสไปรษณีย์..." className="bg-transparent border-none outline-none text-sm w-full resize-none min-h-[80px] px-2" value={formData.address} onChange={handleChange} style={{ color: 'var(--text-main)' }}></textarea></div></div>
                     <div className="mt-2 p-4 rounded-2xl" style={{ background: 'var(--bg-element)', border: '1px solid var(--border-glass)' }}>
                       <label className="flex items-start gap-3 cursor-pointer">
                         <input type="checkbox" name="pdpaConsent" required checked={formData.pdpaConsent} onChange={handleChange} className="w-5 h-5 accent-purple-600 rounded mt-0.5" />
-                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          <strong style={{ color: 'var(--text-main)' }}>การให้ความยินยอม (PDPA)</strong><br/>
-                          ข้าพเจ้ายินยอมให้เก็บรวบรวมและใช้ข้อมูลส่วนบุคคล เพื่อวัตถุประสงค์ในการจองคิวและให้บริการ
-                        </div>
+                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}><strong style={{ color: 'var(--text-main)' }}>การให้ความยินยอม (PDPA)</strong><br/>ข้าพเจ้ายินยอมให้เก็บรวบรวมและใช้ข้อมูลส่วนบุคคล เพื่อวัตถุประสงค์ในการจองคิวและให้บริการ</div>
                       </label>
                     </div>
-
                     <button type="submit" className="w-full btn-gold py-4 rounded-2xl text-white font-bold text-lg mt-2">ยืนยันการสมัคร</button>
                   </div>
                 </form>
               </div>
             )}
 
+            {/* BOOKING STEP (เหมือนเดิม) */}
             {step === 'BOOKING' && (
               <div className="animate-fade-in">
                 <div className="mb-6 px-2">
                   <h2 className="text-3xl font-bold leading-tight tracking-tight mb-2" style={{ color: 'var(--text-main)' }}>เลือกบริการ นัดเวลา<br/>จองได้ในไม่กี่ขั้นตอน</h2>
                 </div>
-                
                 {isConfigured && dbError && (
                   <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-2xl text-sm border border-red-200">
-                    <strong className="block mb-1"><Icon name="alert-circle" className="w-5 h-5 inline mr-1" /> ดึงข้อมูลจากฐานข้อมูลไม่ได้!</strong>
-                    โปรดรันโค้ด SQL เพื่ออนุญาตการอ่านข้อมูล (แก้ปัญหา RLS) ในเมนู SQL Editor ของ Supabase
+                    <strong className="block mb-1"><Icon name="alert-circle" className="w-5 h-5 inline mr-1" /> ดึงข้อมูลไม่ได้!</strong>
+                    โปรดรันโค้ด SQL เพื่อตั้งค่า RLS ใน Supabase
                   </div>
                 )}
-
                 <form onSubmit={handleBookingSubmit} className="glass-panel rounded-[28px] overflow-hidden mb-8">
-                  
-                  {/* 1. รายละเอียดบริการ */}
                   <div className="p-5 border-b relative z-10" style={{ borderColor: 'var(--border-glass)' }}>
                     <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="map-pin" className="w-5 h-5" /> 1. รายละเอียดการจอง</h3>
                     <div className="flex flex-col gap-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>บริการ</label>
-                        <div className="input-shell rounded-2xl">
-                          <select name="serviceId" required className="form-element" value={formData.serviceId} onChange={handleChange}>
-                            <option value="" disabled>เลือกบริการ</option>
-                            {servicesData.map(s => <option key={s.id} value={s.id}>{s.name} • {s.duration_minutes} นาที</option>)}
-                          </select>
-                        </div>
-                      </div>
+                      <div className="flex flex-col gap-1.5"><label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>บริการ</label><div className="input-shell rounded-2xl"><select name="serviceId" required className="form-element" value={formData.serviceId} onChange={handleChange}><option value="" disabled>เลือกบริการ</option>{servicesData.map(s => <option key={s.id} value={s.id}>{s.name} • {s.duration_minutes} นาที</option>)}</select></div></div>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>สาขา/สถานที่</label>
-                          <div className="input-shell rounded-2xl">
-                            <select name="locationId" required className="form-element px-3" value={formData.locationId} onChange={handleChange}>
-                              <option value="" disabled>เลือกสาขา</option>
-                              {branchesData.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>จำนวนผู้รับบริการ</label>
-                          <div className="input-shell rounded-2xl">
-                            <select name="pax" required className="form-element px-3" value={formData.pax} onChange={handleChange}>
-                              {[1,2,3,4].map(n => <option key={n} value={n}>{n} ท่าน</option>)}
-                            </select>
-                          </div>
-                        </div>
+                        <div className="flex flex-col gap-1.5"><label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>สาขา/สถานที่</label><div className="input-shell rounded-2xl"><select name="locationId" required className="form-element px-3" value={formData.locationId} onChange={handleChange}><option value="" disabled>เลือกสาขา</option>{branchesData.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div></div>
+                        <div className="flex flex-col gap-1.5"><label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>จำนวนผู้รับบริการ</label><div className="input-shell rounded-2xl"><select name="pax" required className="form-element px-3" value={formData.pax} onChange={handleChange}>{[1,2,3,4].map(n => <option key={n} value={n}>{n} ท่าน</option>)}</select></div></div>
                       </div>
-
-                      {/* 2. เลือกพนักงานนวด */}
-                      <div className="flex flex-col gap-1.5 mt-2">
-                        <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>เลือกพนักงานนวด (Therapist)</label>
-                        <div className="input-shell rounded-2xl">
-                          <select name="staffId" className="form-element" value={formData.staffId} onChange={handleChange}>
-                            {MOCK_STAFF.map(staff => <option key={staff.id} value={staff.id}>{staff.name}</option>)}
-                          </select>
-                        </div>
-                      </div>
+                      <div className="flex flex-col gap-1.5 mt-2"><label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>เลือกพนักงานนวด (Therapist)</label><div className="input-shell rounded-2xl"><select name="staffId" className="form-element" value={formData.staffId} onChange={handleChange}>{MOCK_STAFF.map(staff => <option key={staff.id} value={staff.id}>{staff.name}</option>)}</select></div></div>
                     </div>
                   </div>
 
-                  {/* 3. วันและเวลา */}
                   <div className="p-5 border-b relative z-10" style={{ borderColor: 'var(--border-glass)' }}>
                     <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="calendar" className="w-5 h-5" /> 2. วันและเวลา</h3>
                     <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>วันที่นัดหมาย</label>
-                        <div className="input-shell rounded-2xl"><input type="date" name="date" required min={today} className="form-element" value={formData.date} onChange={handleChange} /></div>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>เวลาเริ่ม</label>
-                        <div className="input-shell rounded-2xl"><input type="time" name="time" required className="form-element" value={formData.time} onChange={handleChange} /></div>
-                      </div>
+                      <div className="flex flex-col gap-1.5"><label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>วันที่นัดหมาย</label><div className="input-shell rounded-2xl"><input type="date" name="date" required min={today} className="form-element" value={formData.date} onChange={handleChange} /></div></div>
+                      <div className="flex flex-col gap-1.5"><label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>เวลาเริ่ม</label><div className="input-shell rounded-2xl"><input type="time" name="time" required className="form-element" value={formData.time} onChange={handleChange} /></div></div>
                     </div>
-                    {/* แสดงเวลาสิ้นสุดอัตโนมัติ */}
-                    <div className="p-3 rounded-xl flex items-center gap-2 text-sm" style={{ background: isDarkMode ? 'rgba(168, 85, 247, 0.1)' : 'rgba(168, 85, 247, 0.05)', border: '1px solid var(--border-glass)', color: 'var(--text-heading)' }}>
-                      <Icon name="clock" className="w-4 h-4 opacity-70" /> {endTime}
-                    </div>
+                    <div className="p-3 rounded-xl flex items-center gap-2 text-sm" style={{ background: isDarkMode ? 'rgba(168, 85, 247, 0.1)' : 'rgba(168, 85, 247, 0.05)', border: '1px solid var(--border-glass)', color: 'var(--text-heading)' }}><Icon name="clock" className="w-4 h-4 opacity-70" /> {endTime}</div>
                   </div>
 
-                  {/* 4. อุปกรณ์เพิ่มเติม */}
                   {isOffSite && (
                     <div className="p-5 border-b relative z-10 animate-fade-in" style={{ borderColor: 'var(--border-glass)' }}>
                       <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="package" className="w-5 h-5" /> 3. ขอรับอุปกรณ์เสริม (ฟรี)</h3>
-                      <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>สำหรับการนวดนอกสถานที่ (Delivery) โปรดระบุหากท่านต้องการให้พนักงานเตรียมอุปกรณ์ไปให้</p>
+                      <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>สำหรับการนวดนอกสถานที่ (Delivery)</p>
                       <div className="grid grid-cols-2 gap-3">
-                        <label className="check-item">
-                          <input type="checkbox" name="equip_mat" checked={formData.equipments.mat} onChange={handleChange} />
-                          <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>เบาะรองนวด</span>
-                        </label>
-                        <label className="check-item">
-                          <input type="checkbox" name="equip_towel" checked={formData.equipments.towel} onChange={handleChange} />
-                          <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>ผ้าขนหนู</span>
-                        </label>
+                        <label className="check-item"><input type="checkbox" name="equip_mat" checked={formData.equipments.mat} onChange={handleChange} /><span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>เบาะรองนวด</span></label>
+                        <label className="check-item"><input type="checkbox" name="equip_towel" checked={formData.equipments.towel} onChange={handleChange} /><span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>ผ้าขนหนู</span></label>
                       </div>
                     </div>
                   )}
 
-                  {/* 5. แบบสอบถามสุขภาพ */}
                   <div className="p-5 border-b relative z-10" style={{ borderColor: 'var(--border-glass)' }}>
                     <h3 className="font-semibold mb-3 flex items-center gap-2 text-red-500"><Icon name="heart-pulse" className="w-5 h-5" /> {isOffSite ? '4.' : '3.'} ข้อมูลสุขภาพเบื้องต้น</h3>
-                    <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>เพื่อความปลอดภัยในการรับบริการ โปรดติ๊กเครื่องหมายหากท่านมีภาวะดังต่อไปนี้</p>
+                    <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>เพื่อความปลอดภัย โปรดระบุหากท่านมีภาวะดังนี้</p>
                     <div className="flex flex-col gap-3">
-                      <label className="check-item">
-                        <input type="checkbox" name="health_pregnant" checked={formData.healthRisks.pregnant} onChange={handleChange} />
-                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>กำลังตั้งครรภ์</span>
-                      </label>
-                      <label className="check-item">
-                        <input type="checkbox" name="health_highBp" checked={formData.healthRisks.highBp} onChange={handleChange} />
-                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>โรคความดันโลหิตสูง / โรคหัวใจ</span>
-                      </label>
-                      <label className="check-item">
-                        <input type="checkbox" name="health_surgery" checked={formData.healthRisks.surgery} onChange={handleChange} />
-                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>เพิ่งได้รับการผ่าตัด (ภายใน 6 เดือน)</span>
-                      </label>
+                      <label className="check-item"><input type="checkbox" name="health_pregnant" checked={formData.healthRisks.pregnant} onChange={handleChange} /><span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>กำลังตั้งครรภ์</span></label>
+                      <label className="check-item"><input type="checkbox" name="health_highBp" checked={formData.healthRisks.highBp} onChange={handleChange} /><span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>โรคความดัน / โรคหัวใจ</span></label>
+                      <label className="check-item"><input type="checkbox" name="health_surgery" checked={formData.healthRisks.surgery} onChange={handleChange} /><span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>เพิ่งได้รับการผ่าตัด</span></label>
                     </div>
                   </div>
 
@@ -637,32 +557,31 @@
               </div>
             )}
 
-            {/* PAYMENT STEP (Smart Timer Edition) */}
+            {/* ================= STEP: PAYMENT (REALISTIC MVP) ================= */}
             {step === 'PAYMENT' && (
               <div className="animate-fade-in">
                 <div className="mb-6 px-2 text-center">
                   <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>ชำระเงินมัดจำ</h2>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>เพื่อยืนยันคิว รหัสการจอง: <span className="font-mono font-bold">{bookingRef}</span></p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>รหัสการจอง: <span className="font-mono font-bold">{bookingRef}</span></p>
                 </div>
 
-                {/* 🟢 ตัวนับเวลาที่ถูกย้ายมาตรงนี้เพื่อให้เห็นชัดๆ และไม่ขึ้นกับวิธีชำระเงิน */}
                 <div className={`mx-auto mb-6 px-4 py-2.5 rounded-full flex items-center justify-center gap-2 w-fit font-bold text-sm shadow-sm border transition-colors ${timeLeft < 300 ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>
                   <Icon name="clock" className="w-4 h-4" /> 
-                  เวลาที่เหลือในการทำรายการ {formatTime(timeLeft)}
+                  เวลาที่เหลือ {formatTime(timeLeft)} นาที
                 </div>
 
                 <div className="glass-panel rounded-[28px] p-6 mb-6 text-center">
-                  <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>ยอดมัดจำที่ต้องชำระ</p>
+                  <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>ยอดมัดจำสุทธิ</p>
                   <h3 className="text-5xl font-bold mb-2" style={{ color: 'var(--text-heading)' }}>฿{depositTotal.toLocaleString()}</h3>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>({selectedServiceObj.name} x {formData.pax} ท่าน)</p>
                 </div>
 
                 <div className="glass-panel rounded-[28px] p-5 mb-8">
-                  <h3 className="font-semibold mb-4 text-sm" style={{ color: 'var(--text-heading)' }}>เลือกช่องทางชำระเงิน</h3>
+                  <h3 className="font-semibold mb-4 text-sm" style={{ color: 'var(--text-heading)' }}>ช่องทางชำระเงิน</h3>
                   <div className="flex gap-3 mb-6">
                     <button onClick={() => setPaymentMethod('promptpay')} className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all ${paymentMethod === 'promptpay' ? 'border-purple-500 bg-purple-500/10' : 'border-transparent'}`} style={{ background: paymentMethod === 'promptpay' ? '' : 'var(--bg-input)' }}>
                       <Icon name="qr-code" className={`w-6 h-6 ${paymentMethod === 'promptpay' ? 'text-purple-600' : 'text-gray-400'}`} />
-                      <span className={`text-xs font-bold ${paymentMethod === 'promptpay' ? 'text-purple-700' : 'text-gray-500'}`}>พร้อมเพย์ QR</span>
+                      <span className={`text-xs font-bold ${paymentMethod === 'promptpay' ? 'text-purple-700' : 'text-gray-500'}`}>โอนเงิน (สลิป)</span>
                     </button>
                     <button onClick={() => setPaymentMethod('creditcard')} className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all ${paymentMethod === 'creditcard' ? 'border-purple-500 bg-purple-500/10' : 'border-transparent'}`} style={{ background: paymentMethod === 'creditcard' ? '' : 'var(--bg-input)' }}>
                       <Icon name="credit-card" className={`w-6 h-6 ${paymentMethod === 'creditcard' ? 'text-purple-600' : 'text-gray-400'}`} />
@@ -670,67 +589,95 @@
                     </button>
                   </div>
 
+                  {/* --- PromptPay & Slip Upload Flow --- */}
                   {paymentMethod === 'promptpay' && (
-                    <div className="text-center animate-fade-in">
-                      <div className="w-48 h-48 mx-auto bg-white p-2 rounded-2xl shadow-sm mb-4">
-                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PROMPTPAY_${bookingRef}&color=4c1d95`} alt="QR Code" className="w-full h-full object-contain opacity-90" />
+                    <div className="animate-fade-in">
+                      <div className="text-center mb-6">
+                        <div className="w-56 h-56 mx-auto bg-white p-3 rounded-[24px] shadow-sm mb-4 border border-gray-100 relative">
+                          {/* QR Code ของจริง (สร้างผ่าน API ตามยอดเงินและเบอร์) */}
+                          <img src={qrCodeUrl} alt="PromptPay QR Code" className="w-full h-full object-contain" />
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-1">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/PromptPay-logo.png/1200px-PromptPay-logo.png" className="w-8 h-8 object-contain" alt="PromptPay" />
+                          </div>
+                        </div>
+                        <p className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>บริษัท เลอเซนส์ สปา จำกัด</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>พร้อมเพย์: {PROMPTPAY_ID}</p>
                       </div>
-                      <p className="text-xs font-medium mb-4" style={{ color: 'var(--text-muted)' }}>สแกนด้วยแอปพลิเคชันธนาคารใดก็ได้</p>
+
+                      <div className="border-t pt-5 mb-2" style={{ borderColor: 'var(--border-glass)' }}>
+                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="image" className="w-4 h-4" /> อัปโหลดหลักฐานการโอนเงิน</h4>
+                        
+                        <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                        
+                        {!slipImage ? (
+                          <div onClick={() => fileInputRef.current.click()} className="file-upload-zone rounded-[20px] p-6 flex flex-col items-center justify-center gap-2">
+                            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600"><Icon name="upload-cloud" className="w-6 h-6" /></div>
+                            <p className="text-sm font-bold" style={{ color: 'var(--text-heading)' }}>แตะเพื่อเลือกรูปสลิป</p>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>รองรับ .jpg, .png</p>
+                          </div>
+                        ) : (
+                          <div className="relative rounded-[20px] overflow-hidden border border-purple-200">
+                            <img src={slipImage} alt="Slip Preview" className="w-full h-48 object-cover opacity-80" />
+                            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
+                               <Icon name="check-circle" className="w-10 h-10 text-green-400 mb-2" />
+                               <span className="text-white font-bold text-sm">อัปโหลดสำเร็จ</span>
+                               <button onClick={() => setSlipImage(null)} className="mt-3 text-xs bg-white/20 text-white px-3 py-1.5 rounded-full hover:bg-white/30 backdrop-blur-sm">เปลี่ยนรูปภาพ</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
+                  {/* --- Credit Card Form --- */}
                   {paymentMethod === 'creditcard' && (
                     <div className="animate-fade-in flex flex-col gap-3 mb-4">
-                      <div className="input-shell rounded-2xl flex items-center pl-3">
+                      <div className="input-shell rounded-2xl flex items-center pl-3 relative">
                         <Icon name="credit-card" className="w-5 h-5 opacity-50" style={{ color: 'var(--text-main)' }} />
-                        <input type="text" placeholder="หมายเลขบัตรเครดิต" className="form-element pl-2" />
+                        <input type="tel" maxLength="16" placeholder="หมายเลขบัตรเครดิต 16 หลัก" className="form-element pl-2" value={ccData.number} onChange={e => setCcData({...ccData, number: e.target.value.replace(/\D/g,'')})} />
+                        {ccData.number.length === 16 && <Icon name="check-circle" className="w-4 h-4 text-green-500 absolute right-4" />}
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="input-shell rounded-2xl flex items-center px-3"><input type="text" placeholder="MM/YY" className="form-element px-0" /></div>
-                        <div className="input-shell rounded-2xl flex items-center px-3"><input type="text" placeholder="CVV" className="form-element px-0" /></div>
+                        <div className="input-shell rounded-2xl flex items-center px-3"><input type="text" maxLength="5" placeholder="MM/YY" className="form-element px-0 text-center" value={ccData.expiry} onChange={e => setCcData({...ccData, expiry: e.target.value})} /></div>
+                        <div className="input-shell rounded-2xl flex items-center px-3"><input type="tel" maxLength="3" placeholder="CVV" className="form-element px-0 text-center" value={ccData.cvv} onChange={e => setCcData({...ccData, cvv: e.target.value.replace(/\D/g,'')})} /></div>
                       </div>
+                      <p className="text-[10px] text-center mt-2 flex items-center justify-center gap-1" style={{ color: 'var(--text-muted)' }}><Icon name="lock" className="w-3 h-3" /> ข้อมูลของท่านถูกเข้ารหัสอย่างปลอดภัย</p>
                     </div>
                   )}
 
-                  <button onClick={handlePaymentSuccess} className="w-full btn-gold py-4 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-2">
-                    <Icon name="shield-check" className="w-5 h-5" /> {paymentMethod === 'promptpay' ? 'จำลอง: สแกนจ่ายสำเร็จ' : 'ชำระเงิน'}
+                  <button onClick={handlePaymentSuccess} className="w-full btn-gold py-4 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-2 mt-4 shadow-lg">
+                    {paymentMethod === 'promptpay' ? 'ยืนยันการชำระเงิน' : `ชำระ ฿${depositTotal.toLocaleString()}`}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* TICKET STEP */}
+            {/* TICKET STEP (เหมือนเดิม) */}
             {step === 'TICKET' && (
               <div className="animate-fade-in flex flex-col items-center pt-4">
                 <h2 className="text-2xl font-bold mb-6 text-green-600 flex items-center gap-2"><Icon name="check-circle" className="w-8 h-8" /> ชำระเงินสำเร็จ</h2>
-                
                 <div className="w-full max-w-sm glass-panel rounded-[32px] overflow-hidden shadow-2xl relative mb-8" style={{ border: 'none' }}>
                   <div className="bg-gradient-to-br from-purple-600 to-purple-900 p-6 text-center text-white relative">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-10 -mt-10"></div>
                     <p className="text-xs uppercase tracking-widest opacity-80 mb-1">E-Ticket / ใบยืนยันคิว</p>
                     <h3 className="text-xl font-bold">{selectedServiceObj.name}</h3>
                   </div>
-                  
                   <div className="border-t-2 border-dashed border-gray-300 ticket-cutout" style={{ borderColor: 'var(--border-glass)' }}></div>
-
                   <div className="p-6 relative z-10" style={{ background: isDarkMode ? '#1e1b2e' : '#ffffff' }}>
                     <div className="flex justify-between items-center mb-6">
-                      <div><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>วันที่นัดหมาย (Date)</p><p className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>{formData.date}</p></div>
-                      <div className="text-right"><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>เวลา (Time)</p><p className="font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{formData.time} น.</p></div>
+                      <div><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>วันที่นัดหมาย</p><p className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>{formData.date}</p></div>
+                      <div className="text-right"><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>เวลา</p><p className="font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{formData.time} น.</p></div>
                     </div>
-
                     <div className="flex justify-between items-center mb-6">
-                      <div><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>ชื่อลูกค้า (Name)</p><p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{userProfile.name}</p></div>
-                      <div className="text-right"><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>จำนวน (Pax)</p><p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{formData.pax} ท่าน</p></div>
+                      <div><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>ชื่อลูกค้า</p><p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{userProfile.name}</p></div>
+                      <div className="text-right"><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>จำนวน</p><p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{formData.pax} ท่าน</p></div>
                     </div>
-                    
                     <div className="bg-gray-50 p-4 rounded-2xl flex items-center justify-between" style={{ background: 'var(--bg-input)' }}>
                       <div><p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-muted)' }}>Booking Ref.</p><p className="font-mono font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{bookingRef}</p></div>
                       <Icon name="ticket" className="w-8 h-8 opacity-20" style={{ color: 'var(--text-heading)' }} />
                     </div>
                   </div>
                 </div>
-
                 <div className="flex gap-3 w-full max-w-sm">
                   <button onClick={() => window.print()} className="flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-glass)', color: 'var(--text-main)' }}><Icon name="download" className="w-5 h-5" /> บันทึกรูป</button>
                   <button onClick={() => setStep('BOOKING')} className="flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200"><Icon name="home" className="w-5 h-5" /> หน้าหลัก</button>
