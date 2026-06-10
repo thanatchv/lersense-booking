@@ -14,7 +14,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   
-  <!-- โหลด SDK ของ Supabase และ LINE LIFF -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
@@ -36,7 +35,6 @@
 
     const Icon = ({ name, className }) => <i data-lucide={name} className={className}></i>;
 
-    // ข้อมูลจำลองพนักงานนวด
     const MOCK_STAFF = [
       { id: 'random', name: '✨ สุ่มพนักงานที่เหมาะสม' },
       { id: 'ST1', name: 'หมอเอ (เชี่ยวชาญนวดไทย)' },
@@ -67,6 +65,9 @@
       const [bookingRef, setBookingRef] = useState('');
       const [paymentMethod, setPaymentMethod] = useState('promptpay');
       
+      // 🟢 เพิ่ม State สำหรับตัวนับเวลา (15 นาที = 900 วินาที)
+      const [timeLeft, setTimeLeft] = useState(900);
+      
       const today = new Date().toISOString().split('T')[0];
 
       useEffect(() => {
@@ -78,6 +79,33 @@
         fetchSupabaseData();
         initializeApp();
       }, []);
+
+      // 🟢 ระบบนับเวลาถอยหลัง (รันเฉพาะหน้า PAYMENT)
+      useEffect(() => {
+        let timerId;
+        if (step === 'PAYMENT' && timeLeft > 0) {
+          timerId = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+          }, 1000);
+        } else if (step === 'PAYMENT' && timeLeft <= 0) {
+          // เมื่อเวลาหมด ให้กลับไปหน้า BOOKING
+          setModal({ isOpen: true, title: 'หมดเวลาชำระเงิน', message: 'คิวที่ท่านเลือกถูกยกเลิกเนื่องจากหมดเวลาทำรายการ กรุณาทำการจองใหม่อีกครั้งครับ' });
+          setStep('BOOKING');
+          
+          // ระบบจริงตรงนี้จะต้องสั่ง Update Database ให้ status = 'cancelled' ด้วยครับ
+        }
+        
+        return () => {
+          if (timerId) clearInterval(timerId);
+        };
+      }, [step, timeLeft]);
+
+      // ฟังก์ชันแปลงวินาทีเป็น นาที:วินาที
+      const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+      };
 
       const initializeApp = async () => {
         if (LIFF_ID.includes('วาง_') || !isConfigured) {
@@ -234,7 +262,6 @@
         }
       };
 
-      // คำนวณเวลาสิ้นสุดเมื่อมีการเลือกบริการและเวลา
       useEffect(() => {
         if (formData.serviceId && formData.time && servicesData.length > 0) {
           const service = servicesData.find(s => s.id === formData.serviceId);
@@ -251,13 +278,11 @@
         }
       }, [formData.serviceId, formData.time, servicesData]);
 
-      // เช็คว่าเลือกสาขาแบบ Off-site หรือไม่ เพื่อแสดงอุปกรณ์
       const isOffSite = branchesData.find(b => b.id === formData.locationId)?.type === 'off_site';
 
       const handleBookingSubmit = async (e) => {
         e.preventDefault();
         
-        // กั้นกรณีมีความเสี่ยงสุขภาพ
         const { pregnant, highBp, surgery } = formData.healthRisks;
         if (pregnant || highBp || surgery) {
           setModal({ isOpen: true, title: 'ไม่สามารถทำรายการได้อัตโนมัติ', message: 'ท่านมีปัญหาสุขภาพที่อยู่ในกลุ่มเสี่ยง กรุณาติดต่อแอดมินผ่านแชทเพื่อประเมินการรับบริการเพื่อความปลอดภัยครับ' });
@@ -276,7 +301,6 @@
                 customer_id: userProfile.id, 
                 service_id: formData.serviceId,
                 branch_id: formData.locationId, 
-                // บันทึกหมอนวด (ถ้าไม่ได้ดึงจากตาราง ให้เป็น null ไปก่อนได้ หรือสร้าง column แยก)
                 booking_date: formData.date,
                 start_time: formData.time + ":00", 
                 end_time: formData.time + ":00", 
@@ -298,6 +322,7 @@
 
         setTimeout(() => {
           setLoading(false);
+          setTimeLeft(900); // 🟢 รีเซ็ตตัวนับเวลากลับมาเป็น 15 นาที
           setStep('PAYMENT');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 800);
@@ -352,7 +377,6 @@
             .ticket-cutout::before { left: -12px; border-right-color: transparent; border-top-color: transparent; transform: rotate(45deg); }
             .ticket-cutout::after { right: -12px; border-left-color: transparent; border-top-color: transparent; transform: rotate(-45deg); }
             
-            /* Custom Checkbox Container */
             .check-item { background: var(--bg-element); border: 1px solid var(--border-glass); border-radius: 16px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; }
             .check-item:hover { background: var(--bg-input-focus); }
             .check-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: #9333ea; border-radius: 4px; }
@@ -367,7 +391,7 @@
                   <p className="mt-4 font-medium" style={{ color: 'var(--text-main)' }}>กำลังดำเนินการ...</p>
                 </div>
               ) : (
-                <div className="glass-panel p-6 rounded-3xl max-w-sm w-full text-center">
+                <div className="glass-panel p-6 rounded-3xl max-w-sm w-full text-center animate-fade-in">
                   <Icon name="alert-triangle" className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
                   <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>{modal.title}</h3>
                   <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>{modal.message}</p>
@@ -489,7 +513,6 @@
               </div>
             )}
 
-            {/* ================= STEP: BOOKING (FULL FORM) ================= */}
             {step === 'BOOKING' && (
               <div className="animate-fade-in">
                 <div className="mb-6 px-2">
@@ -569,7 +592,7 @@
                     </div>
                   </div>
 
-                  {/* 4. อุปกรณ์เพิ่มเติม (แสดงเมื่อเลือกนอกสถานที่) */}
+                  {/* 4. อุปกรณ์เพิ่มเติม */}
                   {isOffSite && (
                     <div className="p-5 border-b relative z-10 animate-fade-in" style={{ borderColor: 'var(--border-glass)' }}>
                       <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-heading)' }}><Icon name="package" className="w-5 h-5" /> 3. ขอรับอุปกรณ์เสริม (ฟรี)</h3>
@@ -587,7 +610,7 @@
                     </div>
                   )}
 
-                  {/* 5. แบบสอบถามสุขภาพ (สำคัญมาก) */}
+                  {/* 5. แบบสอบถามสุขภาพ */}
                   <div className="p-5 border-b relative z-10" style={{ borderColor: 'var(--border-glass)' }}>
                     <h3 className="font-semibold mb-3 flex items-center gap-2 text-red-500"><Icon name="heart-pulse" className="w-5 h-5" /> {isOffSite ? '4.' : '3.'} ข้อมูลสุขภาพเบื้องต้น</h3>
                     <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>เพื่อความปลอดภัยในการรับบริการ โปรดติ๊กเครื่องหมายหากท่านมีภาวะดังต่อไปนี้</p>
@@ -614,7 +637,7 @@
               </div>
             )}
 
-            {/* PAYMENT STEP (Same as before) */}
+            {/* PAYMENT STEP (Smart Timer Edition) */}
             {step === 'PAYMENT' && (
               <div className="animate-fade-in">
                 <div className="mb-6 px-2 text-center">
@@ -622,8 +645,14 @@
                   <p className="text-sm" style={{ color: 'var(--text-muted)' }}>เพื่อยืนยันคิว รหัสการจอง: <span className="font-mono font-bold">{bookingRef}</span></p>
                 </div>
 
+                {/* 🟢 ตัวนับเวลาที่ถูกย้ายมาตรงนี้เพื่อให้เห็นชัดๆ และไม่ขึ้นกับวิธีชำระเงิน */}
+                <div className={`mx-auto mb-6 px-4 py-2.5 rounded-full flex items-center justify-center gap-2 w-fit font-bold text-sm shadow-sm border transition-colors ${timeLeft < 300 ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>
+                  <Icon name="clock" className="w-4 h-4" /> 
+                  เวลาที่เหลือในการทำรายการ {formatTime(timeLeft)}
+                </div>
+
                 <div className="glass-panel rounded-[28px] p-6 mb-6 text-center">
-                  <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>ยอดมัดจำที่ต้องชำระ (Hold 15 นาที)</p>
+                  <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>ยอดมัดจำที่ต้องชำระ</p>
                   <h3 className="text-5xl font-bold mb-2" style={{ color: 'var(--text-heading)' }}>฿{depositTotal.toLocaleString()}</h3>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>({selectedServiceObj.name} x {formData.pax} ท่าน)</p>
                 </div>
@@ -646,7 +675,7 @@
                       <div className="w-48 h-48 mx-auto bg-white p-2 rounded-2xl shadow-sm mb-4">
                         <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PROMPTPAY_${bookingRef}&color=4c1d95`} alt="QR Code" className="w-full h-full object-contain opacity-90" />
                       </div>
-                      <p className="text-xs text-red-500 font-semibold mb-4 animate-pulse">กรุณาสแกนภายใน 14:59 นาที</p>
+                      <p className="text-xs font-medium mb-4" style={{ color: 'var(--text-muted)' }}>สแกนด้วยแอปพลิเคชันธนาคารใดก็ได้</p>
                     </div>
                   )}
 
@@ -670,7 +699,7 @@
               </div>
             )}
 
-            {/* TICKET STEP (Same as before) */}
+            {/* TICKET STEP */}
             {step === 'TICKET' && (
               <div className="animate-fade-in flex flex-col items-center pt-4">
                 <h2 className="text-2xl font-bold mb-6 text-green-600 flex items-center gap-2"><Icon name="check-circle" className="w-8 h-8" /> ชำระเงินสำเร็จ</h2>
