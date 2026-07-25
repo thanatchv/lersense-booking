@@ -15,7 +15,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="m-0 p-0">
   <div id="root"></div>
@@ -30,8 +30,9 @@
     const isConfigured = !SUPABASE_URL.includes('วาง_');
     const supabaseClient = isConfigured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-    // 🔴 2. ตั้งค่า LIFF ID และเบอร์พร้อมเพย์รับเงิน 🔴
-    const LIFF_ID = '2008899579-4H1nxNds'; 
+    // 🔴 2. ตั้งค่า Google Client ID และเบอร์พร้อมเพย์รับเงิน 🔴
+    const GOOGLE_CLIENT_ID = 'วาง_GOOGLE_CLIENT_ID.apps.googleusercontent.com'; // 👈 นำ Client ID จาก Google Cloud Console มาใส่ตรงนี้
+    const isGoogleConfigured = !GOOGLE_CLIENT_ID.includes('วาง_');
     const PROMPTPAY_ID = '0812345678'; // 👈 เปลี่ยนเป็นเบอร์พร้อมเพย์ของร้านได้เลยครับ
 
     const Icon = ({ name, className }) => <i data-lucide={name} className={className}></i>;
@@ -53,7 +54,8 @@
       const [servicesData, setServicesData] = useState([]);
       const [branchesData, setBranchesData] = useState([]);
       const [userProfile, setUserProfile] = useState(null);
-      const [lineProfile, setLineProfile] = useState(null);
+      const [googleProfile, setGoogleProfile] = useState(null);
+      const googleBtnRef = useRef(null);
 
       const [formData, setFormData] = useState({
         firstName: '', lastName: '', email: '', phone: '', dob: '', address: '',
@@ -105,56 +107,75 @@
       };
 
       const initializeApp = async () => {
-        if (LIFF_ID.includes('วาง_') || !isConfigured) {
+        if (!isGoogleConfigured) {
           setLoading(false);
           return;
         }
         try {
-          await liff.init({ liffId: LIFF_ID });
-          if (liff.isLoggedIn()) handleLiffLoginSuccess();
-          else setLoading(false);
+          if (window.google && window.google.accounts) {
+            window.google.accounts.id.initialize({
+              client_id: GOOGLE_CLIENT_ID,
+              callback: handleGoogleCredentialResponse,
+              auto_select: false,
+            });
+          }
         } catch (err) {
-          console.error('LIFF Init Error:', err);
-          setModal({ isOpen: true, title: 'ข้อผิดพลาดระบบ', message: 'ไม่สามารถเชื่อมต่อ LINE ได้' });
-          setLoading(false);
+          console.error('Google Init Error:', err);
+          setModal({ isOpen: true, title: 'ข้อผิดพลาดระบบ', message: 'ไม่สามารถเชื่อมต่อ Google ได้' });
         }
+        setLoading(false);
       };
+
+      // เรนเดอร์ปุ่ม Google จริงเมื่อกลับมาที่หน้า LOGIN และตั้งค่า Client ID แล้ว
+      useEffect(() => {
+        if (step === 'LOGIN' && isGoogleConfigured && window.google && window.google.accounts && googleBtnRef.current) {
+          window.google.accounts.id.renderButton(googleBtnRef.current, {
+            type: 'standard', theme: 'filled_white', size: 'large', shape: 'pill', width: 320, text: 'signin_with', logo_alignment: 'center'
+          });
+        }
+      }, [step]);
 
       const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-      const handleLiffLoginSuccess = async () => {
+      // ถอดข้อมูลโปรไฟล์จาก Google ID Token (JWT) ที่ได้จาก Google Identity Services
+      const decodeGoogleCredential = (credential) => {
+        const payload = credential.split('.')[1];
+        const decoded = decodeURIComponent(atob(payload.replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        return JSON.parse(decoded);
+      };
+
+      const handleGoogleCredentialResponse = async (response) => {
         setLoading(true);
         try {
-          const profile = await liff.getProfile(); 
-          const lineUserId = profile.userId; 
+          const profile = decodeGoogleCredential(response.credential);
+          const googleUserId = profile.sub;
 
-          const { data: existingUser } = await supabaseClient.from('profiles').select('*').eq('line_user_id', lineUserId).maybeSingle();
+          const { data: existingUser } = await supabaseClient.from('profiles').select('*').eq('google_user_id', googleUserId).maybeSingle();
 
           if (existingUser) {
             setUserProfile({ id: existingUser.id, name: `${existingUser.first_name} ${existingUser.last_name}`, phone: existingUser.phone, tier: existingUser.tier });
             setStep('BOOKING');
           } else {
-            setLineProfile({ displayName: profile.displayName, pictureUrl: profile.pictureUrl, userId: lineUserId });
+            setGoogleProfile({ displayName: profile.name, pictureUrl: profile.picture, email: profile.email, userId: googleUserId });
+            setFormData(prev => ({ ...prev, firstName: profile.given_name || profile.name || '', lastName: profile.family_name || '', email: profile.email || '' }));
             setStep('REGISTER');
           }
         } catch (err) {
           console.error("Login Check Error:", err);
+          setModal({ isOpen: true, title: 'เข้าสู่ระบบไม่สำเร็จ', message: 'ไม่สามารถอ่านข้อมูลจากบัญชี Google ได้ กรุณาลองใหม่อีกครั้ง' });
         }
         setLoading(false);
       };
 
-      const handleLoginButton = () => {
-        if (LIFF_ID.includes('วาง_')) {
-          setLoading(true);
-          setTimeout(() => {
-            setLoading(false);
-            setLineProfile({ displayName: 'สมหญิง รักสปา', pictureUrl: 'https://ui-avatars.com/api/?name=Somying+R&background=00c300&color=fff&size=150', userId: 'U123456789mock' });
-            setFormData(prev => ({ ...prev, firstName: 'สมหญิง', lastName: 'รักสปา' }));
-            setStep('REGISTER');
-          }, 800);
-        } else {
-          liff.login(); 
-        }
+      // ปุ่มจำลองสำหรับตอนที่ยังไม่ได้ตั้งค่า Google Client ID จริง
+      const handleMockGoogleLogin = () => {
+        setLoading(true);
+        setTimeout(() => {
+          setLoading(false);
+          setGoogleProfile({ displayName: 'สมหญิง รักสปา', pictureUrl: 'https://ui-avatars.com/api/?name=Somying+R&background=4285F4&color=fff&size=150', email: 'somying.example@gmail.com', userId: 'G123456789mock' });
+          setFormData(prev => ({ ...prev, firstName: 'สมหญิง', lastName: 'รักสปา', email: 'somying.example@gmail.com' }));
+          setStep('REGISTER');
+        }, 800);
       };
 
       const handleRegister = async (e) => {
@@ -163,10 +184,10 @@
         setLoadingText('กำลังสร้างบัญชีสมาชิก...');
         let currentUserId = 'MOCK_USER_ID';
 
-        if (supabaseClient && lineProfile) {
+        if (supabaseClient && googleProfile) {
           try {
             const { data, error } = await supabaseClient.from('profiles').insert([{
-              line_user_id: lineProfile.userId, 
+              google_user_id: googleProfile.userId, 
               first_name: formData.firstName,
               last_name: formData.lastName,
               email: formData.email,
@@ -476,13 +497,15 @@
             }
             .btn-gold:active { transform: translateY(1px) scale(0.99); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 6px 16px -4px rgba(90,90,220,0.36); }
             .btn-gold:disabled { filter: grayscale(60%) opacity(0.55); cursor: not-allowed; transform: none; }
-            .btn-line {
-              background: linear-gradient(180deg, rgba(255,255,255,0.3), rgba(255,255,255,0) 45%), linear-gradient(135deg, #12d76b 0%, #05b355 100%);
-              border: 1px solid rgba(6,199,85,0.25);
-              box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 14px 30px -6px rgba(6,183,85,0.36);
-              transition: transform .18s ease;
+            .btn-google {
+              background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+              border: 1px solid rgba(0,0,0,0.08);
+              color: #3c4043;
+              box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 26px -8px rgba(66,133,244,0.35), 0 2px 6px rgba(0,0,0,0.06);
+              transition: transform .18s ease, box-shadow .18s ease;
             }
-            .btn-line:active { transform: translateY(1px) scale(0.99); }
+            .btn-google:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 12px 30px -6px rgba(66,133,244,0.4), 0 2px 6px rgba(0,0,0,0.08); }
+            .btn-google:active { transform: translateY(1px) scale(0.99); }
             .btn-ghost {
               background: var(--bg-element);
               border: 1px solid var(--border-glass);
@@ -574,9 +597,14 @@
                 <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--text-main)' }}>ยินดีต้อนรับสู่ Lersense</h2>
                 <p className="text-sm mb-8 px-4" style={{ color: 'var(--text-muted)' }}>กรุณาเข้าสู่ระบบเพื่อดำเนินการจองคิว และสะสมคะแนนสมาชิก</p>
                 <div className="w-full max-w-sm glass-panel p-6 rounded-[32px]">
-                  <button onClick={handleLoginButton} className="w-full btn-line py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2 text-lg">
-                    <Icon name="message-circle" className="w-6 h-6" /> เข้าสู่ระบบด้วย LINE
-                  </button>
+                  {isGoogleConfigured ? (
+                    <div className="flex justify-center" ref={googleBtnRef}></div>
+                  ) : (
+                    <button onClick={handleMockGoogleLogin} className="w-full btn-google py-4 rounded-full font-bold flex items-center justify-center gap-3 text-base">
+                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                      เข้าสู่ระบบด้วย Google
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -588,12 +616,13 @@
                   <p className="text-sm" style={{ color: 'var(--text-muted)' }}>กรุณากรอกข้อมูลที่จำเป็นเพื่อเชื่อมต่อกับบัญชีของท่าน</p>
                 </div>
                 <form onSubmit={handleRegister} className="glass-panel rounded-[28px] overflow-hidden p-6">
-                  {lineProfile && (
-                    <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl shadow-inner border" style={{ background: isDarkMode ? 'rgba(0,195,0,0.08)' : 'rgba(0,195,0,0.05)', borderColor: 'rgba(0,195,0,0.2)' }}>
-                      <img src={lineProfile.pictureUrl} alt="LINE Avatar" className="w-12 h-12 rounded-full border-2 border-[#00c300] shadow-sm" />
+                  {googleProfile && (
+                    <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl shadow-inner border" style={{ background: isDarkMode ? 'rgba(66,133,244,0.10)' : 'rgba(66,133,244,0.06)', borderColor: 'rgba(66,133,244,0.25)' }}>
+                      <img src={googleProfile.pictureUrl} alt="Google Avatar" className="w-12 h-12 rounded-full border-2 border-[#4285F4] shadow-sm" />
                       <div>
-                        <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>เชื่อมต่อกับบัญชี LINE</p>
-                        <p className="font-bold text-sm text-[#00c300]">{lineProfile.displayName}</p>
+                        <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>เชื่อมต่อกับบัญชี Google</p>
+                        <p className="font-bold text-sm" style={{ color: '#4285F4' }}>{googleProfile.displayName}</p>
+                        {googleProfile.email && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{googleProfile.email}</p>}
                       </div>
                     </div>
                   )}
