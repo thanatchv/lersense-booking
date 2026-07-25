@@ -6,14 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Prompt:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-  
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
@@ -365,49 +365,176 @@
       return (
         <div className={`min-h-screen pb-32 transition-colors duration-500 app-container ${isDarkMode ? 'dark' : 'light'}`}>
           <style>{`
-            .app-container { font-family: 'Noto Sans Thai', sans-serif; color-scheme: light; --bg-gradient: radial-gradient(circle at 10% 20%, rgba(183, 148, 244, 0.35), transparent 30%), radial-gradient(circle at 90% 15%, rgba(216, 179, 106, 0.18), transparent 28%), radial-gradient(circle at 85% 85%, rgba(159, 122, 234, 0.20), transparent 25%), linear-gradient(180deg, #f8f5fc 0%, #f3edf9 45%, #efe8f6 100%); --text-main: #1f2937; --text-muted: #4b5563; --text-heading: #4c1d95; --bg-glass: linear-gradient(180deg, rgba(255,255,255,0.66), rgba(255,255,255,0.42)); --border-glass: rgba(255, 255, 255, 0.42); --bg-input: rgba(255,255,255,0.42); --border-input: rgba(255, 255, 255, 0.45); --bg-input-focus: rgba(255,255,255,0.60); --bg-element: rgba(255,255,255,0.3); }
-            .app-container.dark { color-scheme: dark; --bg-gradient: radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.15), transparent 30%), radial-gradient(circle at 90% 15%, rgba(216, 179, 106, 0.1), transparent 28%), radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.1), transparent 25%), linear-gradient(180deg, #1e1528 0%, #160f1d 45%, #0f0a14 100%); --text-main: #f3f4f6; --text-muted: #9ca3af; --text-heading: #d8b4fe; --bg-glass: linear-gradient(180deg, rgba(40, 25, 60, 0.45), rgba(20, 10, 30, 0.6)); --border-glass: rgba(255, 255, 255, 0.08); --bg-input: rgba(0, 0, 0, 0.25); --border-input: rgba(255, 255, 255, 0.05); --bg-input-focus: rgba(0,0,0,0.4); --bg-element: rgba(255,255,255,0.05); }
-            .app-container { background: var(--bg-gradient); color: var(--text-main); }
-            .glass-panel { background: var(--bg-glass); border: 1px solid var(--border-glass); box-shadow: 0 18px 50px rgba(0,0,0,0.1); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); transition: all 0.3s ease; }
-            .input-shell { background: var(--bg-input); border: 1px solid var(--border-input); box-shadow: inset 0 1px 0 var(--border-glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: 0.22s ease; }
-            .input-shell:focus-within { transform: translateY(-1px); border-color: rgba(159,122,234,0.45); box-shadow: 0 0 0 4px rgba(159,122,234,0.15), inset 0 1px 0 var(--border-glass); background: var(--bg-input-focus); }
+            .app-container {
+              font-family: 'Noto Sans Thai', sans-serif;
+              color-scheme: light;
+              --bg-gradient:
+                radial-gradient(circle at 12% 8%, rgba(120,170,255,0.30), transparent 32%),
+                radial-gradient(circle at 88% 6%, rgba(255,190,120,0.22), transparent 30%),
+                radial-gradient(circle at 92% 92%, rgba(160,120,255,0.24), transparent 32%),
+                radial-gradient(circle at 8% 88%, rgba(120,240,220,0.18), transparent 30%),
+                linear-gradient(180deg, #eef3fb 0%, #e9edf7 45%, #e4e9f5 100%);
+              --text-main: #10131a;
+              --text-muted: #5b6272;
+              --text-heading: #1c2340;
+              --bg-glass: linear-gradient(155deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.22) 55%, rgba(255,255,255,0.38) 100%);
+              --border-glass: rgba(255,255,255,0.65);
+              --border-glass-soft: rgba(255,255,255,0.35);
+              --bg-input: rgba(255,255,255,0.38);
+              --border-input: rgba(255,255,255,0.55);
+              --bg-input-focus: rgba(255,255,255,0.62);
+              --bg-element: rgba(255,255,255,0.30);
+              --shadow-ambient: 0 30px 70px rgba(30,40,80,0.16), 0 2px 8px rgba(30,40,80,0.06);
+              --shadow-ambient-sm: 0 12px 30px rgba(30,40,80,0.12);
+              --specular: rgba(255,255,255,0.9);
+              --accent-a: 120,170,255;
+              --accent-b: 160,120,255;
+            }
+            .app-container.dark {
+              color-scheme: dark;
+              --bg-gradient:
+                radial-gradient(circle at 12% 8%, rgba(90,130,255,0.20), transparent 32%),
+                radial-gradient(circle at 88% 6%, rgba(255,170,110,0.14), transparent 30%),
+                radial-gradient(circle at 92% 92%, rgba(150,100,255,0.18), transparent 32%),
+                radial-gradient(circle at 8% 88%, rgba(90,220,200,0.12), transparent 30%),
+                linear-gradient(180deg, #0a0c14 0%, #0d0f1a 45%, #0b0d16 100%);
+              --text-main: #eef1f8;
+              --text-muted: #9198ab;
+              --text-heading: #cdd6ff;
+              --bg-glass: linear-gradient(155deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 55%, rgba(255,255,255,0.06) 100%);
+              --border-glass: rgba(255,255,255,0.14);
+              --border-glass-soft: rgba(255,255,255,0.06);
+              --bg-input: rgba(255,255,255,0.05);
+              --border-input: rgba(255,255,255,0.10);
+              --bg-input-focus: rgba(255,255,255,0.09);
+              --bg-element: rgba(255,255,255,0.045);
+              --shadow-ambient: 0 30px 70px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3);
+              --shadow-ambient-sm: 0 12px 30px rgba(0,0,0,0.4);
+              --specular: rgba(255,255,255,0.18);
+              --accent-a: 110,150,255;
+              --accent-b: 170,130,255;
+            }
+            .app-container { background: var(--bg-gradient); color: var(--text-main); background-attachment: fixed; }
+
+            @keyframes drift1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(4%,6%) scale(1.08); } }
+            @keyframes drift2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-5%,-4%) scale(1.06); } }
+            .liquid-blob { position: fixed; border-radius: 50%; filter: blur(60px); pointer-events: none; z-index: 0; opacity: 0.8; }
+            @media (prefers-reduced-motion: no-preference) {
+              .liquid-blob.b1 { animation: drift1 22s ease-in-out infinite; }
+              .liquid-blob.b2 { animation: drift2 26s ease-in-out infinite; }
+            }
+
+            /* ===== Core glass surface ===== */
+            .glass-panel {
+              position: relative;
+              background: var(--bg-glass);
+              border: 1px solid var(--border-glass);
+              box-shadow: var(--shadow-ambient), inset 0 1px 0 var(--specular), inset 0 -12px 24px -20px rgba(0,0,0,0.25);
+              backdrop-filter: blur(28px) saturate(180%);
+              -webkit-backdrop-filter: blur(28px) saturate(180%);
+              transition: box-shadow .35s ease, transform .35s ease, background .35s ease;
+              isolation: isolate;
+            }
+            .glass-panel::before {
+              content: '';
+              position: absolute; inset: 0;
+              border-radius: inherit;
+              padding: 1px;
+              background: linear-gradient(155deg, rgba(255,255,255,0.85), rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.35));
+              -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+              -webkit-mask-composite: xor; mask-composite: exclude;
+              opacity: 0.9; pointer-events: none;
+            }
+            .app-container.dark .glass-panel::before { background: linear-gradient(155deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.06)); }
+
+            .input-shell {
+              position: relative;
+              background: var(--bg-input);
+              border: 1px solid var(--border-input);
+              box-shadow: inset 0 1px 1px var(--specular), inset 0 -1px 6px rgba(0,0,0,0.03);
+              backdrop-filter: blur(16px) saturate(160%);
+              -webkit-backdrop-filter: blur(16px) saturate(160%);
+              transition: 0.22s ease;
+            }
+            .input-shell:focus-within {
+              transform: translateY(-1px);
+              border-color: rgba(var(--accent-a),0.55);
+              box-shadow: 0 0 0 4px rgba(var(--accent-a),0.14), inset 0 1px 1px var(--specular);
+              background: var(--bg-input-focus);
+            }
             .form-element { width: 100%; background: transparent; border: none; outline: none; padding: 14px; min-height: 52px; color: var(--text-main); font-size: 0.96rem; }
-            select.form-element { appearance: none; background-image: linear-gradient(45deg, transparent 50%, #9ca3af 50%), linear-gradient(135deg, #9ca3af 50%, transparent 50%); background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px); background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; padding-right: 36px; }
-            select.form-element option { background: ${isDarkMode ? '#1f2937' : '#ffffff'}; color: ${isDarkMode ? '#f3f4f6' : '#1f2937'}; }
-            .btn-gold { background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.02)), linear-gradient(135deg, #d6b067 0%, #bf8d39 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 10px 24px rgba(191, 141, 57, 0.32); transition: transform .18s ease; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-            .btn-gold:active { transform: translateY(1px) scale(0.995); }
-            .btn-gold:disabled { filter: grayscale(100%) opacity(0.6); cursor: not-allowed; transform: none; box-shadow: none; }
-            .btn-line { background: linear-gradient(180deg, #10d061 0%, #06b755 100%); border: 1px solid rgba(6,199,85,0.18); box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 10px 24px rgba(6,183,85,0.24); transition: transform .18s ease; }
-            ::-webkit-calendar-picker-indicator { filter: ${isDarkMode ? 'invert(1)' : 'invert(0)'}; }
-            
+            select.form-element { appearance: none; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%); background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px); background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; padding-right: 36px; color-scheme: inherit; opacity: 0.95; }
+            select.form-element option { background: ${isDarkMode ? '#141726' : '#ffffff'}; color: ${isDarkMode ? '#eef1f8' : '#10131a'}; }
+
+            /* ===== Buttons ===== */
+            .btn-gold {
+              position: relative; overflow: hidden;
+              background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0) 40%), linear-gradient(135deg, rgb(var(--accent-a)) 0%, rgb(var(--accent-b)) 100%);
+              box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 14px 30px -6px rgba(90,90,220,0.42), 0 2px 6px rgba(0,0,0,0.08);
+              transition: transform .18s ease, box-shadow .18s ease;
+              text-shadow: 0 1px 3px rgba(0,0,0,0.18);
+            }
+            .btn-gold:active { transform: translateY(1px) scale(0.99); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 6px 16px -4px rgba(90,90,220,0.36); }
+            .btn-gold:disabled { filter: grayscale(60%) opacity(0.55); cursor: not-allowed; transform: none; }
+            .btn-line {
+              background: linear-gradient(180deg, rgba(255,255,255,0.3), rgba(255,255,255,0) 45%), linear-gradient(135deg, #12d76b 0%, #05b355 100%);
+              border: 1px solid rgba(6,199,85,0.25);
+              box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 14px 30px -6px rgba(6,183,85,0.36);
+              transition: transform .18s ease;
+            }
+            .btn-line:active { transform: translateY(1px) scale(0.99); }
+            .btn-ghost {
+              background: var(--bg-element);
+              border: 1px solid var(--border-glass);
+              backdrop-filter: blur(16px);
+              -webkit-backdrop-filter: blur(16px);
+              transition: 0.2s ease;
+            }
+            .btn-ghost:hover { background: var(--bg-input-focus); }
+
+            ::-webkit-calendar-picker-indicator { filter: ${isDarkMode ? 'invert(1)' : 'invert(0)'}; opacity: 0.7; }
+
             .ticket-cutout { position: relative; }
             .ticket-cutout::before, .ticket-cutout::after { content: ''; position: absolute; top: -12px; width: 24px; height: 24px; background: var(--bg-gradient); border-radius: 50%; border: 1px solid var(--border-glass); z-index: 10; }
             .ticket-cutout::before { left: -12px; border-right-color: transparent; border-top-color: transparent; transform: rotate(45deg); }
             .ticket-cutout::after { right: -12px; border-left-color: transparent; border-top-color: transparent; transform: rotate(-45deg); }
-            
-            .check-item { background: var(--bg-element); border: 1px solid var(--border-glass); border-radius: 16px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; }
-            .check-item:hover { background: var(--bg-input-focus); }
-            .check-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: #9333ea; border-radius: 4px; }
-            
-            /* อัปเกรดช่องอัปโหลดไฟล์ */
-            .file-upload-zone { border: 2px dashed var(--border-glass); background: var(--bg-input); transition: all 0.2s; cursor: pointer; }
-            .file-upload-zone:hover { border-color: #9333ea; background: var(--bg-input-focus); }
+
+            .check-item { position: relative; background: var(--bg-element); border: 1px solid var(--border-glass); border-radius: 18px; padding: 13px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+            .check-item:hover { background: var(--bg-input-focus); transform: translateY(-1px); }
+            .check-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: rgb(var(--accent-b)); border-radius: 6px; }
+
+            .file-upload-zone { border: 1.5px dashed var(--border-input); background: var(--bg-input); transition: all 0.2s; cursor: pointer; backdrop-filter: blur(14px); }
+            .file-upload-zone:hover { border-color: rgba(var(--accent-b),0.6); background: var(--bg-input-focus); }
+
+            .badge-chip { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+
+            @keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+            .animate-fade-in { animation: fade-in .45s cubic-bezier(.22,1,.36,1); }
+
+            @keyframes spin-glass { to { transform: rotate(360deg); } }
+            .spinner-glass { border-radius: 50%; border: 3px solid rgba(var(--accent-a),0.18); border-top-color: rgb(var(--accent-b)); animation: spin-glass .9s linear infinite; }
           `}</style>
 
-          {/* Modal Overlay (อัปเดตใส่ข้อความตาม Loading Text) */}
+          {/* Ambient liquid blobs */}
+          <div className="liquid-blob b1" style={{ width: '46vw', height: '46vw', top: '-14vw', left: '-10vw', background: `radial-gradient(circle, rgba(${isDarkMode ? '90,130,255' : '130,180,255'},0.35), transparent 70%)` }}></div>
+          <div className="liquid-blob b2" style={{ width: '40vw', height: '40vw', bottom: '-12vw', right: '-8vw', background: `radial-gradient(circle, rgba(${isDarkMode ? '170,110,255' : '190,150,255'},0.30), transparent 70%)` }}></div>
+
+          {/* Modal Overlay */}
           {(loading || modal.isOpen) && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(10,12,20,0.35)', backdropFilter: 'blur(14px) saturate(140%)', WebkitBackdropFilter: 'blur(14px) saturate(140%)' }}>
               {loading ? (
-                <div className="glass-panel p-6 rounded-3xl flex flex-col items-center animate-fade-in">
-                  <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
-                  <p className="font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{loadingText}</p>
+                <div className="glass-panel p-7 rounded-[28px] flex flex-col items-center animate-fade-in">
+                  <div className="w-12 h-12 spinner-glass mb-4"></div>
+                  <p className="font-bold text-lg text-center" style={{ color: 'var(--text-heading)' }}>{loadingText}</p>
                   <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>กรุณารอสักครู่...</p>
                 </div>
               ) : (
-                <div className="glass-panel p-6 rounded-3xl max-w-sm w-full text-center animate-fade-in">
-                  <Icon name="alert-triangle" className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+                <div className="glass-panel p-6 rounded-[28px] max-w-sm w-full text-center animate-fade-in">
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(250,180,90,0.25), rgba(250,140,90,0.1))', border: '1px solid var(--border-glass)' }}>
+                    <Icon name="alert-triangle" className="w-7 h-7 text-amber-500" />
+                  </div>
                   <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>{modal.title}</h3>
-                  <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>{modal.message}</p>
+                  <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--text-muted)' }}>{modal.message}</p>
                   <button onClick={() => setModal({ isOpen: false, title: '', message: '' })} className="w-full btn-gold py-3 rounded-2xl text-white font-semibold">รับทราบ</button>
                 </div>
               )}
@@ -416,21 +543,21 @@
 
           {/* Topbar */}
           <div className="fixed top-0 left-0 right-0 z-40 h-28 pointer-events-none transition-colors duration-500" 
-               style={{ backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', maskImage: 'linear-gradient(to bottom, black 30%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 30%, transparent 100%)', background: isDarkMode ? 'linear-gradient(to bottom, rgba(30, 21, 40, 0.9) 0%, rgba(30, 21, 40, 0) 100%)' : 'linear-gradient(to bottom, rgba(248, 245, 252, 0.95) 0%, rgba(248, 245, 252, 0) 100%)' }}></div>
+               style={{ backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', maskImage: 'linear-gradient(to bottom, black 30%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 30%, transparent 100%)', background: isDarkMode ? 'linear-gradient(to bottom, rgba(10,12,20,0.85) 0%, rgba(10,12,20,0) 100%)' : 'linear-gradient(to bottom, rgba(238,243,251,0.92) 0%, rgba(238,243,251,0) 100%)' }}></div>
           <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-4 pb-2">
             <div className="max-w-lg mx-auto flex items-center justify-between">
               <div className="flex items-center gap-3 pl-1">
-                <div className="w-10 h-10 rounded-[16px] bg-gradient-to-br from-purple-500 to-yellow-600 p-[1px] shadow-sm relative overflow-hidden flex-shrink-0">
+                <div className="w-10 h-10 rounded-[16px] p-[1px] shadow-sm relative overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(135deg, rgb(var(--accent-a)), rgb(var(--accent-b)))' }}>
                    <div className="absolute inset-0 bg-gradient-to-b from-white/60 to-transparent"></div>
-                   <div className="w-full h-full bg-gradient-to-br from-purple-400 to-yellow-500 rounded-[15px] flex items-center justify-center text-white font-bold text-lg shadow-inner">L</div>
+                   <div className="w-full h-full rounded-[15px] flex items-center justify-center text-white font-bold text-lg shadow-inner" style={{ background: 'linear-gradient(135deg, rgb(var(--accent-a)), rgb(var(--accent-b)))' }}>L</div>
                 </div>
                 <div className="flex flex-col justify-center drop-shadow-sm">
                   <h1 className="font-bold text-[16px] leading-tight tracking-wide" style={{ color: 'var(--text-main)' }}>Lersense Spa</h1>
                   <p className="text-[10px] uppercase tracking-widest font-semibold mt-0.5" style={{ color: 'var(--text-heading)', opacity: 0.9 }}>Enterprise</p>
                 </div>
               </div>
-              <button onClick={toggleTheme} className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm backdrop-blur-md" style={{ background: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)', border: '1px solid var(--border-glass)' }}>
-                <Icon name={isDarkMode ? 'sun' : 'moon'} className={`w-5 h-5 ${isDarkMode ? 'text-yellow-400' : 'text-purple-700'}`} />
+              <button onClick={toggleTheme} className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm btn-ghost">
+                <Icon name={isDarkMode ? 'sun' : 'moon'} className="w-5 h-5" style={{ color: isDarkMode ? '#fbbf24' : 'rgb(var(--accent-b))' }} />
               </button>
             </div>
           </div>
@@ -438,15 +565,15 @@
           {/* Main Content */}
           <div className="max-w-lg mx-auto px-4 pt-24 relative z-30">
             
-            {/* LOGIN & REGISTER STEPS (เหมือนเดิม) */}
+            {/* LOGIN & REGISTER STEPS */}
             {step === 'LOGIN' && (
               <div className="animate-fade-in flex flex-col items-center justify-center pt-10 pb-8 text-center">
-                <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-purple-500 to-yellow-600 p-[2px] shadow-xl mb-8">
-                   <div className="w-full h-full bg-gradient-to-br from-purple-400 to-yellow-500 rounded-[22px] flex items-center justify-center text-white font-bold text-5xl">L</div>
+                <div className="w-24 h-24 rounded-[28px] p-[2px] shadow-xl mb-8" style={{ background: 'linear-gradient(135deg, rgb(var(--accent-a)), rgb(var(--accent-b)))' }}>
+                   <div className="w-full h-full rounded-[26px] flex items-center justify-center text-white font-bold text-5xl" style={{ background: 'linear-gradient(135deg, rgb(var(--accent-a)), rgb(var(--accent-b)))' }}>L</div>
                 </div>
                 <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--text-main)' }}>ยินดีต้อนรับสู่ Lersense</h2>
                 <p className="text-sm mb-8 px-4" style={{ color: 'var(--text-muted)' }}>กรุณาเข้าสู่ระบบเพื่อดำเนินการจองคิว และสะสมคะแนนสมาชิก</p>
-                <div className="w-full max-w-sm glass-panel p-6 rounded-3xl">
+                <div className="w-full max-w-sm glass-panel p-6 rounded-[32px]">
                   <button onClick={handleLoginButton} className="w-full btn-line py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2 text-lg">
                     <Icon name="message-circle" className="w-6 h-6" /> เข้าสู่ระบบด้วย LINE
                   </button>
@@ -462,7 +589,7 @@
                 </div>
                 <form onSubmit={handleRegister} className="glass-panel rounded-[28px] overflow-hidden p-6">
                   {lineProfile && (
-                    <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl shadow-inner border" style={{ background: isDarkMode ? 'rgba(0,195,0,0.1)' : 'rgba(0,195,0,0.05)', borderColor: 'rgba(0,195,0,0.2)' }}>
+                    <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl shadow-inner border" style={{ background: isDarkMode ? 'rgba(0,195,0,0.08)' : 'rgba(0,195,0,0.05)', borderColor: 'rgba(0,195,0,0.2)' }}>
                       <img src={lineProfile.pictureUrl} alt="LINE Avatar" className="w-12 h-12 rounded-full border-2 border-[#00c300] shadow-sm" />
                       <div>
                         <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>เชื่อมต่อกับบัญชี LINE</p>
@@ -484,7 +611,7 @@
                     <div className="flex flex-col gap-1.5"><label className="text-sm pl-1 font-medium" style={{ color: 'var(--text-heading)' }}>ที่อยู่</label><div className="input-shell rounded-2xl flex items-start pl-3 pt-3"><Icon name="home" className="w-5 h-5 opacity-50 mt-1" style={{ color: 'var(--text-main)' }} /><textarea name="address" required placeholder="บ้านเลขที่, ถนน, ซอย, จังหวัด, รหัสไปรษณีย์..." className="bg-transparent border-none outline-none text-sm w-full resize-none min-h-[80px] px-2" value={formData.address} onChange={handleChange} style={{ color: 'var(--text-main)' }}></textarea></div></div>
                     <div className="mt-2 p-4 rounded-2xl" style={{ background: 'var(--bg-element)', border: '1px solid var(--border-glass)' }}>
                       <label className="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" name="pdpaConsent" required checked={formData.pdpaConsent} onChange={handleChange} className="w-5 h-5 accent-purple-600 rounded mt-0.5" />
+                        <input type="checkbox" name="pdpaConsent" required checked={formData.pdpaConsent} onChange={handleChange} className="w-5 h-5 rounded mt-0.5" style={{ accentColor: 'rgb(var(--accent-b))' }} />
                         <div className="text-xs" style={{ color: 'var(--text-muted)' }}><strong style={{ color: 'var(--text-main)' }}>การให้ความยินยอม (PDPA)</strong><br/>ข้าพเจ้ายินยอมให้เก็บรวบรวมและใช้ข้อมูลส่วนบุคคล เพื่อวัตถุประสงค์ในการจองคิวและให้บริการ</div>
                       </label>
                     </div>
@@ -494,14 +621,14 @@
               </div>
             )}
 
-            {/* BOOKING STEP (เหมือนเดิม) */}
+            {/* BOOKING STEP */}
             {step === 'BOOKING' && (
               <div className="animate-fade-in">
                 <div className="mb-6 px-2">
                   <h2 className="text-3xl font-bold leading-tight tracking-tight mb-2" style={{ color: 'var(--text-main)' }}>เลือกบริการ นัดเวลา<br/>จองได้ในไม่กี่ขั้นตอน</h2>
                 </div>
                 {isConfigured && dbError && (
-                  <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-2xl text-sm border border-red-200">
+                  <div className="mb-6 p-4 rounded-2xl text-sm glass-panel" style={{ color: '#dc2626' }}>
                     <strong className="block mb-1"><Icon name="alert-circle" className="w-5 h-5 inline mr-1" /> ดึงข้อมูลไม่ได้!</strong>
                     โปรดรันโค้ด SQL เพื่อตั้งค่า RLS ใน Supabase
                   </div>
@@ -525,7 +652,7 @@
                       <div className="flex flex-col gap-1.5"><label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>วันที่นัดหมาย</label><div className="input-shell rounded-2xl"><input type="date" name="date" required min={today} className="form-element" value={formData.date} onChange={handleChange} /></div></div>
                       <div className="flex flex-col gap-1.5"><label className="text-xs pl-1" style={{ color: 'var(--text-muted)' }}>เวลาเริ่ม</label><div className="input-shell rounded-2xl"><input type="time" name="time" required className="form-element" value={formData.time} onChange={handleChange} /></div></div>
                     </div>
-                    <div className="p-3 rounded-xl flex items-center gap-2 text-sm" style={{ background: isDarkMode ? 'rgba(168, 85, 247, 0.1)' : 'rgba(168, 85, 247, 0.05)', border: '1px solid var(--border-glass)', color: 'var(--text-heading)' }}><Icon name="clock" className="w-4 h-4 opacity-70" /> {endTime}</div>
+                    <div className="p-3 rounded-xl flex items-center gap-2 text-sm" style={{ background: 'var(--bg-element)', border: '1px solid var(--border-glass)', color: 'var(--text-heading)' }}><Icon name="clock" className="w-4 h-4 opacity-70" /> {endTime}</div>
                   </div>
 
                   {isOffSite && (
@@ -540,7 +667,7 @@
                   )}
 
                   <div className="p-5 border-b relative z-10" style={{ borderColor: 'var(--border-glass)' }}>
-                    <h3 className="font-semibold mb-3 flex items-center gap-2 text-red-500"><Icon name="heart-pulse" className="w-5 h-5" /> {isOffSite ? '4.' : '3.'} ข้อมูลสุขภาพเบื้องต้น</h3>
+                    <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: '#e11d48' }}><Icon name="heart-pulse" className="w-5 h-5" /> {isOffSite ? '4.' : '3.'} ข้อมูลสุขภาพเบื้องต้น</h3>
                     <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>เพื่อความปลอดภัย โปรดระบุหากท่านมีภาวะดังนี้</p>
                     <div className="flex flex-col gap-3">
                       <label className="check-item"><input type="checkbox" name="health_pregnant" checked={formData.healthRisks.pregnant} onChange={handleChange} /><span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>กำลังตั้งครรภ์</span></label>
@@ -556,7 +683,7 @@
               </div>
             )}
 
-            {/* ================= STEP: PAYMENT (REALISTIC MVP) ================= */}
+            {/* PAYMENT STEP */}
             {step === 'PAYMENT' && (
               <div className="animate-fade-in">
                 <div className="mb-6 px-2 text-center">
@@ -564,7 +691,7 @@
                   <p className="text-sm" style={{ color: 'var(--text-muted)' }}>รหัสการจอง: <span className="font-mono font-bold">{bookingRef}</span></p>
                 </div>
 
-                <div className={`mx-auto mb-6 px-4 py-2.5 rounded-full flex items-center justify-center gap-2 w-fit font-bold text-sm shadow-sm border transition-colors ${timeLeft < 300 ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>
+                <div className={`mx-auto mb-6 px-4 py-2.5 rounded-full flex items-center justify-center gap-2 w-fit font-bold text-sm badge-chip glass-panel ${timeLeft < 300 ? 'animate-pulse' : ''}`} style={{ color: timeLeft < 300 ? '#e11d48' : 'var(--text-heading)' }}>
                   <Icon name="clock" className="w-4 h-4" /> 
                   เวลาที่เหลือ {formatTime(timeLeft)} นาที
                 </div>
@@ -578,22 +705,21 @@
                 <div className="glass-panel rounded-[28px] p-5 mb-8">
                   <h3 className="font-semibold mb-4 text-sm" style={{ color: 'var(--text-heading)' }}>ช่องทางชำระเงิน</h3>
                   <div className="flex gap-3 mb-6">
-                    <button onClick={() => setPaymentMethod('promptpay')} className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all ${paymentMethod === 'promptpay' ? 'border-purple-500 bg-purple-500/10' : 'border-transparent'}`} style={{ background: paymentMethod === 'promptpay' ? '' : 'var(--bg-input)' }}>
-                      <Icon name="qr-code" className={`w-6 h-6 ${paymentMethod === 'promptpay' ? 'text-purple-600' : 'text-gray-400'}`} />
-                      <span className={`text-xs font-bold ${paymentMethod === 'promptpay' ? 'text-purple-700' : 'text-gray-500'}`}>โอนเงิน (สลิป)</span>
+                    <button onClick={() => setPaymentMethod('promptpay')} className="flex-1 py-3 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all" style={{ borderColor: paymentMethod === 'promptpay' ? 'rgb(var(--accent-b))' : 'transparent', background: paymentMethod === 'promptpay' ? 'rgba(var(--accent-b),0.10)' : 'var(--bg-input)' }}>
+                      <Icon name="qr-code" className="w-6 h-6" style={{ color: paymentMethod === 'promptpay' ? 'rgb(var(--accent-b))' : 'var(--text-muted)' }} />
+                      <span className="text-xs font-bold" style={{ color: paymentMethod === 'promptpay' ? 'rgb(var(--accent-b))' : 'var(--text-muted)' }}>โอนเงิน (สลิป)</span>
                     </button>
-                    <button onClick={() => setPaymentMethod('creditcard')} className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all ${paymentMethod === 'creditcard' ? 'border-purple-500 bg-purple-500/10' : 'border-transparent'}`} style={{ background: paymentMethod === 'creditcard' ? '' : 'var(--bg-input)' }}>
-                      <Icon name="credit-card" className={`w-6 h-6 ${paymentMethod === 'creditcard' ? 'text-purple-600' : 'text-gray-400'}`} />
-                      <span className={`text-xs font-bold ${paymentMethod === 'creditcard' ? 'text-purple-700' : 'text-gray-500'}`}>บัตรเครดิต</span>
+                    <button onClick={() => setPaymentMethod('creditcard')} className="flex-1 py-3 rounded-2xl flex flex-col items-center gap-2 border-2 transition-all" style={{ borderColor: paymentMethod === 'creditcard' ? 'rgb(var(--accent-b))' : 'transparent', background: paymentMethod === 'creditcard' ? 'rgba(var(--accent-b),0.10)' : 'var(--bg-input)' }}>
+                      <Icon name="credit-card" className="w-6 h-6" style={{ color: paymentMethod === 'creditcard' ? 'rgb(var(--accent-b))' : 'var(--text-muted)' }} />
+                      <span className="text-xs font-bold" style={{ color: paymentMethod === 'creditcard' ? 'rgb(var(--accent-b))' : 'var(--text-muted)' }}>บัตรเครดิต</span>
                     </button>
                   </div>
 
-                  {/* --- PromptPay & Slip Upload Flow --- */}
+                  {/* PromptPay & Slip Upload Flow */}
                   {paymentMethod === 'promptpay' && (
                     <div className="animate-fade-in">
                       <div className="text-center mb-6">
-                        <div className="w-56 h-56 mx-auto bg-white p-3 rounded-[24px] shadow-sm mb-4 border border-gray-100 relative">
-                          {/* QR Code ของจริง (สร้างผ่าน API ตามยอดเงินและเบอร์) */}
+                        <div className="w-56 h-56 mx-auto bg-white p-3 rounded-[24px] mb-4 relative" style={{ boxShadow: 'var(--shadow-ambient-sm)', border: '1px solid rgba(255,255,255,0.8)' }}>
                           <img src={qrCodeUrl} alt="PromptPay QR Code" className="w-full h-full object-contain" />
                           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-1">
                             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/PromptPay-logo.png/1200px-PromptPay-logo.png" className="w-8 h-8 object-contain" alt="PromptPay" />
@@ -610,12 +736,12 @@
                         
                         {!slipImage ? (
                           <div onClick={() => fileInputRef.current.click()} className="file-upload-zone rounded-[20px] p-6 flex flex-col items-center justify-center gap-2">
-                            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600"><Icon name="upload-cloud" className="w-6 h-6" /></div>
+                            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--accent-b),0.14)', color: 'rgb(var(--accent-b))' }}><Icon name="upload-cloud" className="w-6 h-6" /></div>
                             <p className="text-sm font-bold" style={{ color: 'var(--text-heading)' }}>แตะเพื่อเลือกรูปสลิป</p>
                             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>รองรับ .jpg, .png</p>
                           </div>
                         ) : (
-                          <div className="relative rounded-[20px] overflow-hidden border border-purple-200">
+                          <div className="relative rounded-[20px] overflow-hidden" style={{ border: '1px solid rgba(var(--accent-b),0.35)' }}>
                             <img src={slipImage} alt="Slip Preview" className="w-full h-48 object-cover opacity-80" />
                             <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
                                <Icon name="check-circle" className="w-10 h-10 text-green-400 mb-2" />
@@ -628,7 +754,7 @@
                     </div>
                   )}
 
-                  {/* --- Credit Card Form --- */}
+                  {/* Credit Card Form */}
                   {paymentMethod === 'creditcard' && (
                     <div className="animate-fade-in flex flex-col gap-3 mb-4">
                       <div className="input-shell rounded-2xl flex items-center pl-3 relative">
@@ -644,25 +770,25 @@
                     </div>
                   )}
 
-                  <button onClick={handlePaymentSuccess} className="w-full btn-gold py-4 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-2 mt-4 shadow-lg">
+                  <button onClick={handlePaymentSuccess} className="w-full btn-gold py-4 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-2 mt-4">
                     {paymentMethod === 'promptpay' ? 'ยืนยันการชำระเงิน' : `ชำระ ฿${depositTotal.toLocaleString()}`}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* TICKET STEP (เหมือนเดิม) */}
+            {/* TICKET STEP */}
             {step === 'TICKET' && (
               <div className="animate-fade-in flex flex-col items-center pt-4">
-                <h2 className="text-2xl font-bold mb-6 text-green-600 flex items-center gap-2"><Icon name="check-circle" className="w-8 h-8" /> ชำระเงินสำเร็จ</h2>
-                <div className="w-full max-w-sm glass-panel rounded-[32px] overflow-hidden shadow-2xl relative mb-8" style={{ border: 'none' }}>
-                  <div className="bg-gradient-to-br from-purple-600 to-purple-900 p-6 text-center text-white relative">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-10 -mt-10"></div>
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2" style={{ color: '#059669' }}><Icon name="check-circle" className="w-8 h-8" /> ชำระเงินสำเร็จ</h2>
+                <div className="w-full max-w-sm glass-panel rounded-[32px] overflow-hidden relative mb-8">
+                  <div className="p-6 text-center text-white relative" style={{ background: 'linear-gradient(135deg, rgb(var(--accent-a)), rgb(var(--accent-b)))' }}>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10"></div>
                     <p className="text-xs uppercase tracking-widest opacity-80 mb-1">E-Ticket / ใบยืนยันคิว</p>
                     <h3 className="text-xl font-bold">{selectedServiceObj.name}</h3>
                   </div>
-                  <div className="border-t-2 border-dashed border-gray-300 ticket-cutout" style={{ borderColor: 'var(--border-glass)' }}></div>
-                  <div className="p-6 relative z-10" style={{ background: isDarkMode ? '#1e1b2e' : '#ffffff' }}>
+                  <div className="border-t-2 border-dashed ticket-cutout" style={{ borderColor: 'var(--border-glass)' }}></div>
+                  <div className="p-6 relative z-10">
                     <div className="flex justify-between items-center mb-6">
                       <div><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>วันที่นัดหมาย</p><p className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>{formData.date}</p></div>
                       <div className="text-right"><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>เวลา</p><p className="font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{formData.time} น.</p></div>
@@ -671,15 +797,15 @@
                       <div><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>ชื่อลูกค้า</p><p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{userProfile.name}</p></div>
                       <div className="text-right"><p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>จำนวน</p><p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{formData.pax} ท่าน</p></div>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-2xl flex items-center justify-between" style={{ background: 'var(--bg-input)' }}>
+                    <div className="p-4 rounded-2xl flex items-center justify-between" style={{ background: 'var(--bg-element)', border: '1px solid var(--border-glass)' }}>
                       <div><p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-muted)' }}>Booking Ref.</p><p className="font-mono font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{bookingRef}</p></div>
                       <Icon name="ticket" className="w-8 h-8 opacity-20" style={{ color: 'var(--text-heading)' }} />
                     </div>
                   </div>
                 </div>
                 <div className="flex gap-3 w-full max-w-sm">
-                  <button onClick={() => window.print()} className="flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-glass)', color: 'var(--text-main)' }}><Icon name="download" className="w-5 h-5" /> บันทึกรูป</button>
-                  <button onClick={() => setStep('BOOKING')} className="flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200"><Icon name="home" className="w-5 h-5" /> หน้าหลัก</button>
+                  <button onClick={() => window.print()} className="flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors btn-ghost" style={{ color: 'var(--text-main)' }}><Icon name="download" className="w-5 h-5" /> บันทึกรูป</button>
+                  <button onClick={() => setStep('BOOKING')} className="flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors" style={{ background: 'rgba(var(--accent-b),0.14)', color: 'rgb(var(--accent-b))' }}><Icon name="home" className="w-5 h-5" /> หน้าหลัก</button>
                 </div>
               </div>
             )}
