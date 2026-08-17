@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ครอบจักรวาล — แพลตฟอร์มเติมเกมที่คนไทยไว้ใจ</title>
+<meta name="description" content="เติมเกมกว่า 200 เกม ปลอดภัยด้วยระบบยืนยันตัวตน KYC ชำระผ่าน Stripe และ TrueMoney รับไอเทมไวใน 30 วินาที บริการ 24/7 พร้อมผู้ช่วย AI" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%230A0D12%22/><circle cx=%2250%22 cy=%2250%22 r=%2218%22 fill=%22%23D9A94E%22/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="demo-ribbon">โหมด<b>สาธิต (DEMO)</b> — ไม่เชื่อมต่อ Stripe / TrueMoney จริง · ไม่เก็บข้อมูลบัตรหรือเอกสารยืนยันตัวตนจริง</div>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-mark"></span>
+      <span class="logo-text">ครอบ<em>จักรวาล</em></span>
+    </a>
+    <nav class="main-nav">
+      <a href="#games">เกมที่รองรับ</a>
+      <a href="#howto">วิธีใช้งาน</a>
+      <a href="#security">ความปลอดภัย</a>
+      <a href="policy.html">นโยบายคืนเงิน</a>
+      <a href="#faq">คำถามที่พบบ่อย</a>
+    </nav>
+    <div class="header-actions">
+      <a href="auth.html" class="btn btn-ghost btn-small">เข้าสู่ระบบ</a>
+      <a href="auth.html#register" class="btn btn-primary btn-small">สมัครสมาชิก</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-inner">
+
+      <div class="promo-strip">
+        🎁 สมัครวันนี้รับโบนัสเติมเงินเพิ่ม 5% หมดเขตใน <span id="countdown" class="mono">00:00:00</span>
+        <a href="auth.html#register" class="btn btn-primary">รับสิทธิ์เลย</a>
+      </div>
+
+      <h1>เติมเกมไว ปลอดภัย<br>มี<span class="hl">ตัวตนจริง</span>ยืนยันได้ทุกธุรกรรม</h1>
+      <p class="hero-sub">แพลตฟอร์มเติมเกมที่ผ่านการยืนยันตัวตน (KYC) รองรับเกมมากที่สุดในไทยกว่า 200 เกม ชำระเงินผ่าน Stripe และ TrueMoney พร้อมระบบคืนเงินที่ตรวจสอบได้ทุกขั้นตอน</p>
+
+      <div class="hero-cta">
+        <a href="auth.html#register" class="btn btn-primary">สมัครสมาชิกเริ่มเติมเกม</a>
+        <a href="#games" class="btn btn-ghost">ดูเกมที่รองรับทั้งหมด</a>
+      </div>
+
+      <div class="trust-row">
+        <div class="trust-chip">
+          <div class="scan-ring"></div>
+          <div class="trust-chip-text"><b>ยืนยันตัวตนทุกบัญชี</b><span>ระบบ KYC มาตรฐานเดียวกับสถาบันการเงิน</span></div>
+        </div>
+        <div class="trust-chip">
+          <div class="badge badge-ok"><span class="dot"></span>เข้ารหัส TLS 256-bit</div>
+        </div>
+        <div class="trust-chip">
+          <div class="badge badge-warn"><span class="dot"></span>คืนเงินไวใน 15–60 นาที*</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticker-wrap">
+      <div class="ticker-track" id="tickerTrack">
+        <!-- duplicated in JS-free fallback; two sets for seamless loop -->
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="stats" style="padding-top:0;">
+    <div class="wrap">
+      <div class="stats-bar">
+        <div class="stat"><span class="stat-num" data-target="1.2" data-suffix="M+" data-decimals="1">0</span><span class="stat-label">ผู้ใช้งานสะสม</span></div>
+        <div class="stat"><span class="stat-num" data-target="200" data-suffix="+">0</span><span class="stat-label">เกมที่รองรับ</span></div>
+        <div class="stat"><span class="stat-num" data-target="28" data-suffix="s">0</span><span class="stat-label">เวลาเฉลี่ยรับไอเทม</span></div>
+        <div class="stat"><span class="stat-num" data-target="4.9" data-suffix="/5" data-decimals="1">0</span><span class="stat-label">คะแนนความพึงพอใจ</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAMES -->
+  <section class="games" id="games">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="section-eyebrow">คลังเกมครบวงจร</p>
+          <h2>รองรับเกมมากที่สุดในไทย</h2>
+          <p class="section-sub">เลือกเกม ระบบจะพาไปยังขั้นตอนเติมเงินทันที</p>
+        </div>
+      </div>
+
+      <div class="games-toolbar">
+        <button class="chip-filter active" data-cat="all">ทั้งหมด</button>
+        <button class="chip-filter" data-cat="mobile">มือถือ</button>
+        <button class="chip-filter" data-cat="pc">พีซี</button>
+        <button class="chip-filter" data-cat="wallet">กระเป๋าเกม</button>
+      </div>
+
+      <div class="games-grid" id="gamesGrid">
+        <button class="game-card" data-cat="mobile"><span class="game-icon">🔥</span><span>Free Fire</span></button>
+        <button class="game-card" data-cat="mobile"><span class="game-icon">⚔️</span><span>RoV</span></button>
+        <button class="game-card" data-cat="mobile"><span class="game-icon">🎯</span><span>PUBG Mobile</span></button>
+        <button class="game-card" data-cat="pc"><span class="game-icon">💥</span><span>Valorant</span></button>
+        <button class="game-card" data-cat="mobile"><span class="game-icon">✨</span><span>Genshin Impact</span></button>
+        <button class="game-card" data-cat="mobile"><span class="game-icon">🛡️</span><span>Mobile Legends</span></button>
+        <button class="game-card" data-cat="mobile"><span class="game-icon">🌙</span><span>Undawn</span></button>
+        <button class="game-card" data-cat="mobile"><span class="game-icon">🗡️</span><span>Ragnarok X</span></button>
+        <button class="game-card" data-cat="pc"><span class="game-icon">🚂</span><span>Honkai: Star Rail</span></button>
+        <button class="game-card" data-cat="pc"><span class="game-icon">🧙</span><span>League of Legends</span></button>
+        <button class="game-card" data-cat="wallet"><span class="game-icon">👜</span><span>Garena Shells</span></button>
+        <button class="game-card" data-cat="wallet"><span class="game-icon">💳</span><span>Steam Wallet</span></button>
+        <button class="game-card" data-cat="mobile"><span class="game-icon">🎭</span><span>Identity V</span></button>
+        <button class="game-card" data-cat="mobile"><span class="game-icon">🕹️</span><span>Point Blank</span></button>
+        <button class="game-card" data-cat="pc"><span class="game-icon">⚡</span><span>Zenless Zone Zero</span></button>
+        <button class="game-card" data-cat="mobile"><span class="game-icon">🏹</span><span>Wild Rift</span></button>
+        <button class="game-card" data-cat="mobile"><span class="game-icon">🧩</span><span>ROBLOX</span></button>
+        <button class="game-card"><span class="game-icon g-more">+184</span><span>เกมอื่นๆ</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ORDER -->
+  <section class="order" id="order">
+    <div class="wrap order-wrap">
+      <div class="order-copy">
+        <p class="section-eyebrow">เติมเงินทันที</p>
+        <h2>เลือกเกม เลือกแพ็กเกจ<br>ชำระเงินอย่างมั่นใจ</h2>
+        <p class="section-sub">ตัวอย่างขั้นตอนการเติมเกม — ในระบบจริงต้องเข้าสู่ระบบและเชื่อมบัญชีเกมก่อนเสมอ เพื่อความปลอดภัยของไอเทมและเงินของคุณ</p>
+        <ul class="order-points">
+          <li>ราคาแสดงชัดเจนก่อนกดยืนยันทุกครั้ง ไม่มีค่าธรรมเนียมแอบแฝง</li>
+          <li>รองรับ Stripe (บัตรเครดิต/เดบิต) และ TrueMoney Wallet</li>
+          <li>ทุกคำสั่งซื้อมีเลขที่อ้างอิงตรวจสอบย้อนหลังได้</li>
+        </ul>
+        <div class="pay-badges" style="margin-top:24px;">
+          <div class="pay-badge"><span class="pdot" style="background:#635BFF;"></span>Stripe</div>
+          <div class="pay-badge"><span class="pdot" style="background:#FF7A00;"></span>TrueMoney Wallet</div>
+        </div>
+      </div>
+
+      <form class="order-card" id="orderForm">
+        <div class="field">
+          <label for="gameSelect">เกม</label>
+          <select id="gameSelect" required>
+            <option value="" disabled selected>เลือกเกม</option>
+            <option>Free Fire</option><option>RoV</option><option>PUBG Mobile</option>
+            <option>Valorant</option><option>Genshin Impact</option><option>Mobile Legends</option>
+            <option>Undawn</option><option>Ragnarok X</option><option>Honkai: Star Rail</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>แพ็กเกจ</label>
+          <div class="package-grid" id="packageGrid">
+            <button type="button" class="pkg" data-price="29"><span class="pkg-amt">60 เพชร</span><span class="pkg-price">฿29</span></button>
+            <button type="button" class="pkg" data-price="149"><span class="pkg-amt">325 เพชร</span><span class="pkg-price">฿149</span><span class="pkg-bonus">+5% โบนัส</span></button>
+            <button type="button" class="pkg" data-price="299"><span class="pkg-amt">660 เพชร</span><span class="pkg-price">฿299</span><span class="pkg-bonus">+5% โบนัส</span></button>
+            <button type="button" class="pkg" data-price="599"><span class="pkg-amt">1,350 เพชร</span><span class="pkg-price">฿599</span><span class="pkg-bonus">+8% โบนัส</span></button>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field"><label for="playerId">Player ID</label><input type="text" id="playerId" placeholder="เช่น 123456789" required /></div>
+          <div class="field"><label for="serverId">Zone / Server <span style="color:var(--text-faint);">(ถ้ามี)</span></label><input type="text" id="serverId" placeholder="เช่น 8288" /></div>
+        </div>
+
+        <div class="field">
+          <label>ช่องทางชำระเงิน</label>
+          <div class="pay-tabs">
+            <button type="button" class="pay-tab active" data-target="payStripe">Stripe</button>
+            <button type="button" class="pay-tab" data-target="payTrue">TrueMoney</button>
+          </div>
+          <div class="pay-panel active" id="payStripe" style="margin-top:12px;">
+            <div class="field-row">
+              <div class="field"><label>หมายเลขบัตร</label><input type="text" placeholder="4242 4242 4242 4242" /></div>
+              <div class="field"><label>วันหมดอายุ / CVC</label><input type="text" placeholder="MM/YY · CVC" /></div>
+            </div>
+            <p class="field-hint">จำลอง UI ของ Stripe Elements — ไม่มีการส่งข้อมูลบัตรจริง</p>
+          </div>
+          <div class="pay-panel" id="payTrue" style="margin-top:12px;">
+            <div class="field"><label>เบอร์โทรที่ผูก TrueMoney Wallet</label><input type="tel" placeholder="08X-XXX-XXXX" /></div>
+            <p class="field-hint">จำลองการยืนยัน OTP ผ่าน TrueMoney — ไม่มีการเชื่อมต่อจริง</p>
+          </div>
+        </div>
+
+        <div class="order-summary"><span>ยอดชำระทั้งหมด</span><b id="summaryTotal">฿0</b></div>
+
+        <button type="submit" class="btn btn-primary btn-full">ยืนยันคำสั่งซื้อ (เดโม่)</button>
+        <p class="order-note">* หน้าจำลองสำหรับสาธิตดีไซน์เท่านั้น ไม่มีการทำธุรกรรมจริง</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- HOW TO -->
+  <section class="howto" id="howto">
+    <div class="wrap">
+      <p class="section-eyebrow">ขั้นตอนใช้งาน</p>
+      <h2>4 ขั้นตอนสู่ไอเทมในมือ</h2>
+      <ol class="stepper">
+        <li><span class="step-n">01</span><h3>สมัคร + ยืนยันตัวตน</h3><p>ลงทะเบียนและยืนยันตัวตนผ่านระบบ KYC เพื่อความปลอดภัยของบัญชี</p></li>
+        <li><span class="step-n">02</span><h3>เชื่อมบัญชีเกม</h3><p>ผูก Player ID ของแต่ละเกมกับบัญชีของคุณเพียงครั้งเดียว</p></li>
+        <li><span class="step-n">03</span><h3>เลือกแพ็กเกจ + ชำระเงิน</h3><p>เลือกจำนวนที่ต้องการ ชำระผ่าน Stripe หรือ TrueMoney</p></li>
+        <li><span class="step-n">04</span><h3>รับไอเทมทันที</h3><p>ระบบประมวลผลอัตโนมัติ ไอเทมเข้าบัญชีในเกมภายในไม่กี่วินาที</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- SECURITY -->
+  <section class="security" id="security">
+    <div class="wrap">
+      <p class="section-eyebrow">ความปลอดภัยและความน่าเชื่อถือ</p>
+      <h2>ออกแบบให้ปลอดภัยตั้งแต่ชั้นแรก</h2>
+      <p class="section-sub">ทุกธุรกรรมตรวจสอบย้อนกลับได้ ทุกบัญชีผ่านการยืนยันตัวตน</p>
+
+      <div class="feature-split" style="margin-top:32px;">
+        <div class="feature-card">
+          <div class="f-icon">🪪</div>
+          <h4>ยืนยันตัวตน (KYC)</h4>
+          <p>ทุกบัญชีต้องยืนยันตัวตนด้วยบัตรประชาชนและเซลฟี่ก่อนทำธุรกรรม ลดความเสี่ยงบัญชีปลอมและการฟอกเงิน</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">↩️</div>
+          <h4>รับประกันคืนเงิน</h4>
+          <p>หากไอเทมไม่เข้าบัญชีตามเงื่อนไข รับเงินคืนอัตโนมัติภายใน 15–60 นาที ตรวจสอบสถานะได้ตลอดเวลา</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">🔒</div>
+          <h4>เข้ารหัสระดับธนาคาร</h4>
+          <p>ข้อมูลบัตรประมวลผลผ่าน Stripe โดยตรง เราไม่จัดเก็บเลขบัตรไว้ในระบบของเราเอง</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">🤖</div>
+          <h4>ผู้ช่วย AI ตลอด 24/7</h4>
+          <p>สอบถามสถานะคำสั่งซื้อ นโยบายคืนเงิน หรือปัญหาการเชื่อมบัญชีได้ทันทีผ่านแชท AI มุมขวาล่าง</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI TEASER -->
+  <section class="ai-teaser">
+    <div class="wrap" style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;justify-content:space-between;">
+      <div style="max-width:480px;">
+        <p class="section-eyebrow">ผู้ช่วยอัจฉริยะ</p>
+        <h2>มีคำถาม? ให้ผู้ช่วย AI ตอบทันที</h2>
+        <p>สอบถามเรื่องการคืนเงิน การเชื่อมบัญชี หรือช่องทางชำระเงินได้ตลอด 24 ชั่วโมง</p>
+        <button class="btn btn-primary" onclick="document.getElementById('chatFab').click()">แชทกับผู้ช่วยตอนนี้</button>
+      </div>
+      <div class="card" style="padding:22px;max-width:360px;width:100%;">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;">
+          <span class="badge badge-ok"><span class="dot"></span>ออนไลน์</span>
+          <span style="font-size:12px;color:var(--text-faint);">ตอบกลับเฉลี่ย &lt; 10 วินาที</span>
+        </div>
+        <div class="msg msg-bot" style="margin-bottom:8px;">สวัสดีครับ มีอะไรให้ช่วยเรื่องการเติมเกมไหมครับ?</div>
+        <div class="msg msg-user" style="margin-left:auto;">คืนเงินใช้เวลากี่นาที?</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEWS -->
+  <section class="reviews">
+    <div class="wrap">
+      <p class="section-eyebrow">เสียงจากผู้ใช้งาน</p>
+      <h2>รีวิวจากนักเติมเกมตัวจริง</h2>
+      <div class="review-track">
+        <blockquote class="review-card"><div class="review-stars">★★★★★</div><p>“ยืนยันตัวตนครั้งเดียว หลังจากนั้นเติมได้เร็วมาก ไม่ต้องกรอกซ้ำ”</p><cite>— น็อต, สายแรงค์ Free Fire</cite></blockquote>
+        <blockquote class="review-card"><div class="review-stars">★★★★★</div><p>“ตอนโอนผิดจำนวน ระบบคืนเงินให้ไวมาก ประทับใจเรื่องความโปร่งใส”</p><cite>— มายด์, นักสะสมสกิน</cite></blockquote>
+        <blockquote class="review-card"><div class="review-stars">★★★★☆</div><p>“ชอบที่มี AI ตอบคำถามได้ทันทีตอนตี 2 ไม่ต้องรอแอดมิน”</p><cite>— เจได, สาย RoV</cite></blockquote>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq" id="faq">
+    <div class="wrap">
+      <p class="section-eyebrow">คำถามที่พบบ่อย</p>
+      <h2>ทุกข้อสงสัยเกี่ยวกับการเติมเกม</h2>
+      <div class="faq-list">
+        <details open><summary>ทำไมต้องยืนยันตัวตน (KYC) ก่อนเติมเกม</summary><p>เพื่อป้องกันบัญชีปลอม การฉ้อโกง และทำให้ระบบคืนเงินสามารถตรวจสอบและดำเนินการได้รวดเร็วและปลอดภัยสำหรับทุกฝ่าย</p></details>
+        <details><summary>คืนเงินได้ในกรณีใดบ้าง และใช้เวลานานแค่ไหน</summary><p>กรณีไอเทมไม่เข้าบัญชีภายในเวลาที่กำหนด หรือระบบตัดเงินซ้ำ จะได้รับเงินคืนอัตโนมัติภายใน 15–60 นาที เข้าช่องทางเดิมที่ใช้ชำระ</p></details>
+        <details><summary>ต้องเชื่อมบัญชีเกมทุกครั้งที่เติมหรือไม่</summary><p>เชื่อมเพียงครั้งเดียวต่อเกม ระบบจะจดจำ Player ID ไว้ ครั้งต่อไปเลือกเกมแล้วเติมได้ทันที</p></details>
+        <details><summary>รองรับการชำระเงินช่องทางใดบ้าง</summary><p>รองรับบัตรเครดิต/เดบิตผ่าน Stripe และ TrueMoney Wallet โดยไม่มีการจัดเก็บข้อมูลบัตรไว้ในระบบของเราเอง</p></details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="logo-text small">ครอบ<em>จักรวาล</em></div>
+        <p class="footer-note">แพลตฟอร์มเดโม่สำหรับสาธิตดีไซน์เว็บเติมเกม ไม่ใช่บริการชำระเงินหรือ KYC จริง</p>
+        <div class="pay-badges" style="margin-top:16px;">
+          <div class="pay-badge" style="padding:8px 14px;font-size:12.5px;"><span class="pdot" style="background:#635BFF;"></span>Stripe</div>
+          <div class="pay-badge" style="padding:8px 14px;font-size:12.5px;"><span class="pdot" style="background:#FF7A00;"></span>TrueMoney</div>
+        </div>
+      </div>
+      <div class="footer-col"><h5>บริการ</h5><a href="#games">เกมที่รองรับ</a><a href="#order">เติมเงิน</a><a href="#howto">วิธีใช้งาน</a></div>
+      <div class="footer-col"><h5>บัญชี</h5><a href="auth.html">เข้าสู่ระบบ</a><a href="auth.html#register">สมัครสมาชิก</a><a href="account.html">บัญชีของฉัน</a></div>
+      <div class="footer-col"><h5>ช่วยเหลือ</h5><a href="policy.html">นโยบายคืนเงิน</a><a href="#security">ความปลอดภัย</a><a href="#faq">คำถามที่พบบ่อย</a></div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 ครอบจักรวาล — เว็บไซต์เดโม่เพื่อการสาธิตเท่านั้น</span>
+      <span>ไม่มีการเก็บข้อมูลบัตรชำระเงินหรือเอกสารยืนยันตัวตนจริงบนเว็บนี้</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ORDER MODAL -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <h3 id="modalTitle">กำลังดำเนินการ...</h3>
+    <p id="modalSub">กำลังตรวจสอบคำสั่งซื้อของคุณ</p>
+    <button class="btn btn-primary btn-full" id="modalClose">ปิดหน้าต่าง</button>
+  </div>
+</div>
+
+<!-- AI CHAT WIDGET -->
+<button class="chat-fab" id="chatFab" aria-label="เปิดแชทผู้ช่วย AI">💬<span class="ping"></span></button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-head">
+    <span class="ch-dot"></span>
+    <div><b>ผู้ช่วย AI ครอบจักรวาล</b><span>ตอบคำถามพื้นฐาน 24/7 (เดโม่)</span></div>
+    <button id="chatClose" class="btn btn-ghost btn-small" style="margin-left:auto;padding:6px 10px;">✕</button>
+  </div>
+  <div class="chat-body" id="chatBody">
+    <div class="msg msg-bot">สวัสดีครับ 👋 ผมคือผู้ช่วย AI ของครอบจักรวาล ถามเรื่องการคืนเงิน การเชื่อมบัญชี หรือช่องทางชำระเงินได้เลยครับ</div>
+  </div>
+  <div class="chat-suggest">
+    <button class="chat-chip">คืนเงินใช้เวลากี่นาที?</button>
+    <button class="chat-chip">เชื่อมบัญชีเกมยังไง?</button>
+    <button class="chat-chip">รองรับ Stripe ไหม?</button>
+  </div>
+  <form class="chat-input-row" id="chatForm">
+    <input type="text" id="chatInput" placeholder="พิมพ์คำถามของคุณ..." />
+    <button type="submit">➤</button>
+  </form>
+</div>
+
+<script src="main.js"></script>
+<script>
+  // Build seamless ticker with two duplicated sets
+  const tickerData = [
+    ['Free Fire', '325 เพชร'], ['RoV', '240 คูปอง'], ['Valorant', '1,750 VP'],
+    ['PUBG Mobile', '660 UC'], ['Genshin Impact', '980 คริสตัล'], ['Mobile Legends', '500 เพชร'],
+    ['TrueMoney', 'เติม ฿199'], ['Ragnarok X', '1,200 Zeny Coin'], ['Honkai: Star Rail', '660 Oneiric']
+  ];
+  const track = document.getElementById('tickerTrack');
+  function renderSet(){
+    return tickerData.map(([g, a]) => `
+      <div class="ticker-item"><span class="t-ok">●</span> <b>${g}</b> เติม ${a} สำเร็จ <span style="color:var(--text-faint)">${Math.floor(Math.random()*50)+3} วินาทีที่แล้ว</span></div>
+    `).join('');
+  }
+  track.innerHTML = renderSet() + renderSet();
+</script>
+</body>
+</html>
