@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>บัญชีของฉัน — ครอบจักรวาล</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="demo-ribbon">โหมด<b>สาธิต (DEMO)</b> — ข้อมูลบัญชี ยอดเงิน และประวัติคำสั่งซื้อทั้งหมดในหน้านี้เป็นข้อมูลจำลอง</div>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-mark"></span>
+      <span class="logo-text">ครอบ<em>จักรวาล</em></span>
+    </a>
+    <nav class="main-nav">
+      <a href="index.html#games">เกมที่รองรับ</a>
+      <a href="index.html#order">เติมเงิน</a>
+      <a href="policy.html">นโยบายคืนเงิน</a>
+      <a href="account.html" class="active">บัญชีของฉัน</a>
+    </nav>
+    <div class="header-actions">
+      <a href="index.html" class="btn btn-ghost btn-small">ออกจากระบบ</a>
+    </div>
+  </div>
+</header>
+
+<main class="dash-shell">
+  <div class="wrap">
+
+    <div class="dash-top">
+      <div>
+        <p class="section-eyebrow">แดชบอร์ดของฉัน</p>
+        <h2 style="margin-bottom:4px;">สวัสดี, คุณผู้เดินทาง 👋</h2>
+        <span class="badge badge-ok"><span class="dot"></span>ยืนยันตัวตนแล้ว (KYC Verified)</span>
+      </div>
+      <a href="index.html#order" class="btn btn-primary">+ เติมเงินใหม่</a>
+    </div>
+
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="sc-label">ยอดใช้จ่ายสะสม</div>
+        <div class="sc-val">฿4,820</div>
+        <div class="sc-sub">27 คำสั่งซื้อ</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">บัญชีเกมที่เชื่อมแล้ว</div>
+        <div class="sc-val">4 / 200+</div>
+        <div class="sc-sub">เชื่อมเพิ่มได้ตลอดเวลา</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">คำขอคืนเงินที่กำลังดำเนินการ</div>
+        <div class="sc-val">0</div>
+        <div class="sc-sub">ไม่มีรายการค้าง</div>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <div>
+        <div class="panel">
+          <div class="panel-head"><h3>ประวัติคำสั่งซื้อ</h3><span class="field-hint">อัปเดตล่าสุดวันนี้</span></div>
+          <table>
+            <thead><tr><th>เลขที่คำสั่งซื้อ</th><th>เกม</th><th>รายการ</th><th>จำนวนเงิน</th><th>สถานะ</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">#KJ-88213</td><td><b>Free Fire</b></td><td>325 เพชร</td><td class="mono">฿149</td><td><span class="badge badge-ok"><span class="dot"></span>สำเร็จ</span></td></tr>
+              <tr><td class="mono">#KJ-88190</td><td><b>Valorant</b></td><td>1,750 VP</td><td class="mono">฿599</td><td><span class="badge badge-ok"><span class="dot"></span>สำเร็จ</span></td></tr>
+              <tr><td class="mono">#KJ-88144</td><td><b>RoV</b></td><td>240 คูปอง</td><td class="mono">฿99</td><td><span class="badge badge-warn"><span class="dot"></span>คืนเงินแล้ว</span></td></tr>
+              <tr><td class="mono">#KJ-88102</td><td><b>Genshin Impact</b></td><td>980 คริสตัล</td><td class="mono">฿299</td><td><span class="badge badge-ok"><span class="dot"></span>สำเร็จ</span></td></tr>
+              <tr><td class="mono">#KJ-88077</td><td><b>Mobile Legends</b></td><td>500 เพชร</td><td class="mono">฿199</td><td><span class="badge badge-ok"><span class="dot"></span>สำเร็จ</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>บัญชีเกมที่เชื่อมต่อ</h3><span class="field-hint">4 บัญชี</span></div>
+          <ul class="linked-list">
+            <li class="linked-item">
+              <div class="li-game"><span class="game-icon">🔥</span><div><div class="li-name">Free Fire</div><div class="li-id">ID 123456789 · Zone 8288</div></div></div>
+              <span class="badge badge-ok">เชื่อมแล้ว</span>
+            </li>
+            <li class="linked-item">
+              <div class="li-game"><span class="game-icon">⚔️</span><div><div class="li-name">RoV</div><div class="li-id">ID 998877 · Zone —</div></div></div>
+              <span class="badge badge-ok">เชื่อมแล้ว</span>
+            </li>
+            <li class="linked-item">
+              <div class="li-game"><span class="game-icon">💥</span><div><div class="li-name">Valorant</div><div class="li-id">Riot ID: nova#TH21</div></div></div>
+              <span class="badge badge-ok">เชื่อมแล้ว</span>
+            </li>
+            <li class="linked-item">
+              <div class="li-game"><span class="game-icon">✨</span><div><div class="li-name">Genshin Impact</div><div class="li-id">UID 823 019 445</div></div></div>
+              <span class="badge badge-ok">เชื่อมแล้ว</span>
+            </li>
+          </ul>
+
+          <div class="games-grid" style="margin-top:18px;grid-template-columns:repeat(6,1fr);">
+            <button class="game-card" data-link-game="Mobile Legends"><span class="game-icon">🛡️</span><span>Mobile Legends</span></button>
+            <button class="game-card" data-link-game="PUBG Mobile"><span class="game-icon">🎯</span><span>PUBG Mobile</span></button>
+            <button class="game-card" data-link-game="Undawn"><span class="game-icon">🌙</span><span>Undawn</span></button>
+            <button class="game-card" data-link-game="Ragnarok X"><span class="game-icon">🗡️</span><span>Ragnarok X</span></button>
+            <button class="game-card" data-link-game="Honkai: Star Rail"><span class="game-icon">🚂</span><span>Honkai: Star Rail</span></button>
+            <button class="game-card" data-link-game="อื่นๆ"><span class="game-icon g-more">+195</span><span>ดูเพิ่มเติม</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel kyc-status-card">
+          <div class="ks-icon">🪪</div>
+          <div>
+            <div style="font-size:14px;color:var(--text);font-weight:500;">สถานะยืนยันตัวตน</div>
+            <div class="field-hint">อนุมัติเมื่อ 12 ส.ค. 2569</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>ช่องทางชำระเงิน</h3></div>
+          <div class="pay-badges" style="flex-direction:column;">
+            <div class="pay-badge" style="width:100%;justify-content:space-between;"><span style="display:flex;align-items:center;gap:10px;"><span class="pdot" style="background:#635BFF;"></span>Stripe •••• 4242</span><span class="field-hint">ค่าเริ่มต้น</span></div>
+            <div class="pay-badge" style="width:100%;justify-content:space-between;"><span style="display:flex;align-items:center;gap:10px;"><span class="pdot" style="background:#FF7A00;"></span>TrueMoney 08X-XXX-1123</span></div>
+          </div>
+          <button class="btn btn-ghost btn-full" style="margin-top:14px;" type="button">+ เพิ่มช่องทางชำระเงิน</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>ศูนย์ช่วยเหลือ</h3></div>
+          <p style="font-size:13px;">มีปัญหากับคำสั่งซื้อ หรือต้องการขอคืนเงิน?</p>
+          <button class="btn btn-primary btn-full" type="button" onclick="document.getElementById('chatFab').click()">แชทกับผู้ช่วย AI</button>
+          <a href="policy.html" class="btn btn-ghost btn-full" style="margin-top:10px;">ดูนโยบายคืนเงิน</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-bottom">
+    <span>© 2026 ครอบจักรวาล — เว็บไซต์เดโม่เพื่อการสาธิตเท่านั้น</span>
+    <span>ข้อมูลบัญชีและประวัติการทำรายการในหน้านี้เป็นข้อมูลจำลองทั้งหมด</span>
+  </div>
+</footer>
+
+<!-- LINK GAME MODAL -->
+<div class="modal-backdrop" id="linkModal">
+  <div class="modal">
+    <h3>เชื่อมบัญชี <span id="linkGameName" style="color:var(--accent);"></span></h3>
+    <p>กรอก Player ID เพื่อผูกบัญชีเกมนี้เข้ากับบัญชีของคุณ (จำลอง)</p>
+    <div class="field"><label>Player ID</label><input type="text" placeholder="กรอก ID ของคุณ" /></div>
+    <div class="field" style="margin-top:12px;"><label>Zone / Server <span style="color:var(--text-faint);">(ถ้ามี)</span></label><input type="text" placeholder="ไม่บังคับ" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-full" id="linkModalClose" type="button">ยกเลิก</button>
+      <button class="btn btn-primary btn-full" id="linkConfirm" type="button">ยืนยันการเชื่อมต่อ</button>
+    </div>
+  </div>
+</div>
+
+<button class="chat-fab" id="chatFab" aria-label="เปิดแชทผู้ช่วย AI">💬<span class="ping"></span></button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-head">
+    <span class="ch-dot"></span>
+    <div><b>ผู้ช่วย AI ครอบจักรวาล</b><span>ตอบคำถามพื้นฐาน 24/7 (เดโม่)</span></div>
+    <button id="chatClose" class="btn btn-ghost btn-small" style="margin-left:auto;padding:6px 10px;">✕</button>
+  </div>
+  <div class="chat-body" id="chatBody">
+    <div class="msg msg-bot">สวัสดีครับ มีปัญหาเรื่องคำสั่งซื้อหรือการเชื่อมบัญชีไหมครับ?</div>
+  </div>
+  <div class="chat-suggest">
+    <button class="chat-chip">ขอคืนเงินยังไง?</button>
+    <button class="chat-chip">เชื่อมบัญชีเกมยังไง?</button>
+  </div>
+  <form class="chat-input-row" id="chatForm">
+    <input type="text" id="chatInput" placeholder="พิมพ์คำถามของคุณ..." />
+    <button type="submit">➤</button>
+  </form>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>
