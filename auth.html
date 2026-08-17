@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>เข้าสู่ระบบ / สมัครสมาชิก — ครอบจักรวาล</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="demo-ribbon">โหมด<b>สาธิต (DEMO)</b> — ฟอร์มนี้ไม่ส่งข้อมูลไปยังเซิร์ฟเวอร์จริง ไฟล์ที่อัปโหลดจะไม่ถูกบันทึกที่ใดทั้งสิ้น</div>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-mark"></span>
+      <span class="logo-text">ครอบ<em>จักรวาล</em></span>
+    </a>
+    <nav class="main-nav">
+      <a href="index.html#games">เกมที่รองรับ</a>
+      <a href="index.html#security">ความปลอดภัย</a>
+      <a href="policy.html">นโยบายคืนเงิน</a>
+    </nav>
+    <div class="header-actions">
+      <a href="index.html" class="btn btn-ghost btn-small">กลับหน้าแรก</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="auth-shell">
+    <div class="wrap auth-grid">
+
+      <div class="auth-side">
+        <p class="section-eyebrow">ปลอดภัยตั้งแต่ก้าวแรก</p>
+        <h2>ยืนยันตัวตนครั้งเดียว<br>เติมเกมได้ทุกครั้งอย่างมั่นใจ</h2>
+        <p class="section-sub">ทุกบัญชีต้องผ่านการยืนยันตัวตน (KYC) เพื่อป้องกันบัญชีปลอมและทำให้ระบบคืนเงินทำงานได้รวดเร็ว</p>
+        <ul class="auth-list">
+          <li><span class="li-ico">🪪</span><span>ยืนยันตัวตนด้วยบัตรประชาชนและเซลฟี่ อนุมัติภายใน 1–5 นาที</span></li>
+          <li><span class="li-ico">🔗</span><span>เชื่อมบัญชีเกมได้หลังสมัครเสร็จ ผูกครั้งเดียวใช้ได้ตลอด</span></li>
+          <li><span class="li-ico">↩️</span><span>มีสิทธิ์ขอคืนเงินอัตโนมัติเมื่อรายการเข้าเงื่อนไข</span></li>
+          <li><span class="li-ico">🔒</span><span>ข้อมูลส่วนตัวเข้ารหัสและใช้เพื่อยืนยันตัวตนเท่านั้น</span></li>
+        </ul>
+      </div>
+
+      <div class="auth-card" id="register">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-target="loginPanel">เข้าสู่ระบบ</button>
+          <button class="auth-tab" data-target="registerPanel">สมัครสมาชิก</button>
+        </div>
+
+        <!-- LOGIN -->
+        <div class="auth-panel active" id="loginPanel">
+          <div class="field"><label for="loginEmail">อีเมลหรือเบอร์โทรศัพท์</label><input type="text" id="loginEmail" placeholder="you@email.com" /></div>
+          <div class="field"><label for="loginPw">รหัสผ่าน</label><input type="password" id="loginPw" placeholder="••••••••" /></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;">
+            <label class="check-row" style="align-items:center;"><input type="checkbox" checked /> <span>จำฉันไว้</span></label>
+            <a href="#" style="color:var(--accent);">ลืมรหัสผ่าน?</a>
+          </div>
+          <button class="btn btn-primary btn-full" type="button" onclick="alert('เข้าสู่ระบบสำเร็จ (จำลอง) — กำลังพาไปหน้าบัญชีของฉัน'); window.location.href='account.html';">เข้าสู่ระบบ</button>
+          <p class="field-hint" style="text-align:center;">ยังไม่มีบัญชี? <a href="#" style="color:var(--accent);" onclick="document.querySelector('[data-target=registerPanel]').click();return false;">สมัครสมาชิก</a></p>
+        </div>
+
+        <!-- REGISTER (KYC stepper) -->
+        <div class="auth-panel" id="registerPanel">
+          <div class="kyc-progress"><span class="done"></span><span></span><span></span></div>
+
+          <div class="kyc-step active" id="kycStep0">
+            <div class="field"><label for="regName">ชื่อ-นามสกุล</label><input type="text" id="regName" placeholder="ชื่อจริงตามบัตรประชาชน" /></div>
+            <div class="field"><label for="regEmail">อีเมล</label><input type="email" id="regEmail" placeholder="you@email.com" /></div>
+            <div class="field"><label for="regPhone">เบอร์โทรศัพท์</label><input type="tel" id="regPhone" placeholder="08X-XXX-XXXX" /></div>
+            <div class="field"><label for="regPw">ตั้งรหัสผ่าน</label><input type="password" id="regPw" placeholder="อย่างน้อย 8 ตัวอักษร" /></div>
+            <button class="btn btn-primary btn-full" type="button" data-kyc-next>ถัดไป: ยืนยันตัวตน</button>
+          </div>
+
+          <div class="kyc-step" id="kycStep1">
+            <div class="kyc-note">ขั้นตอนนี้เป็นเพียงตัวอย่าง UI — ไฟล์ที่เลือกจะไม่ถูกอัปโหลดหรือบันทึกที่ใดทั้งสิ้น</div>
+            <label class="kyc-upload"><input type="file" accept="image/*" /><div class="ku-icon">🪪</div><div>อัปโหลดรูปบัตรประชาชน</div><div class="ku-name">ยังไม่ได้เลือกไฟล์</div></label>
+            <label class="kyc-upload"><input type="file" accept="image/*" /><div class="ku-icon">🤳</div><div>อัปโหลดเซลฟี่ถือบัตรประชาชน</div><div class="ku-name">ยังไม่ได้เลือกไฟล์</div></label>
+            <div class="step-nav">
+              <button class="btn btn-ghost" type="button" data-kyc-back>ย้อนกลับ</button>
+              <button class="btn btn-primary" type="button" data-kyc-next>ถัดไป: ยืนยันข้อมูล</button>
+            </div>
+          </div>
+
+          <div class="kyc-step" id="kycStep2">
+            <div style="text-align:center;padding:10px 0 4px;">
+              <div style="font-size:38px;">✅</div>
+              <h3 style="margin:10px 0 6px;">พร้อมยืนยันตัวตนแล้ว</h3>
+              <p style="font-size:13.5px;">ระบบจะตรวจสอบเอกสารและอนุมัติภายในประมาณ 1–5 นาที (จำลอง)</p>
+            </div>
+            <label class="check-row"><input type="checkbox" checked /><span>ฉันยืนยันว่าข้อมูลและเอกสารที่ให้ไว้เป็นความจริง และยอมรับ<a href="policy.html" style="color:var(--accent);">เงื่อนไขการให้บริการ</a></span></label>
+            <button class="btn btn-primary btn-full" type="button" onclick="alert('สมัครสมาชิกและส่งคำขอยืนยันตัวตนสำเร็จ (จำลอง) — กำลังพาไปหน้าเชื่อมบัญชีเกม'); window.location.href='account.html';">ยืนยันและสร้างบัญชี</button>
+            <div class="step-nav"><button class="btn btn-ghost btn-full" type="button" data-kyc-back>ย้อนกลับ</button></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-bottom">
+    <span>© 2026 ครอบจักรวาล — เว็บไซต์เดโม่เพื่อการสาธิตเท่านั้น</span>
+    <span>ไม่มีการเก็บข้อมูลบัตรชำระเงินหรือเอกสารยืนยันตัวตนจริงบนเว็บนี้</span>
+  </div>
+</footer>
+
+<button class="chat-fab" id="chatFab" aria-label="เปิดแชทผู้ช่วย AI">💬<span class="ping"></span></button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-head">
+    <span class="ch-dot"></span>
+    <div><b>ผู้ช่วย AI ครอบจักรวาล</b><span>ตอบคำถามพื้นฐาน 24/7 (เดโม่)</span></div>
+    <button id="chatClose" class="btn btn-ghost btn-small" style="margin-left:auto;padding:6px 10px;">✕</button>
+  </div>
+  <div class="chat-body" id="chatBody">
+    <div class="msg msg-bot">สวัสดีครับ 👋 มีคำถามเรื่องการสมัครหรือยืนยันตัวตนไหมครับ?</div>
+  </div>
+  <div class="chat-suggest">
+    <button class="chat-chip">KYC ใช้เวลานานแค่ไหน?</button>
+    <button class="chat-chip">ลืมรหัสผ่านทำยังไง?</button>
+  </div>
+  <form class="chat-input-row" id="chatForm">
+    <input type="text" id="chatInput" placeholder="พิมพ์คำถามของคุณ..." />
+    <button type="submit">➤</button>
+  </form>
+</div>
+
+<script src="main.js"></script>
+<script>
+  if (location.hash === '#register') {
+    document.querySelector('[data-target=registerPanel]')?.click();
+  }
+</script>
+</body>
+</html>
